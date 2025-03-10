@@ -1,0 +1,34 @@
+{
+    "name": "vite-plugin-image-tool",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "dev": "vite",
+        "build": "vue-tsc -b && vite build",
+        "commit": "git add . && git-cz",
+        "push": "npm run commit && git push --follow-tags",
+        "test-build:vue": "set TYPE=vue && npm run build"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "@types/node": "^22.13.9",
+        "@vitejs/plugin-vue": "^5.2.1",
+        "@vue/tsconfig": "^0.7.0",
+        "commitizen": "^4.3.1",
+        "cz-conventional-changelog": "^3.3.0",
+        "minimist": "^1.2.8",
+        "sharp": "^0.33.5",
+        "svgo": "^3.3.2",
+        "typescript": "~5.7.2",
+        "vite": "^6.2.0",
+        "vue-tsc": "^2.2.4"
+    },
+    "config": {
+        "commitizen": {
+            "path": "./node_modules/cz-conventional-changelog"
+        }
+    }
+}
