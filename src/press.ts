@@ -1,85 +1,70 @@
-import { join, parse } from 'path'
-import { IMG_FORMATS, IMG_FORMATS_ENUM } from './constants'
-import { formatBytes } from './utils'
+import path, { join, parse } from 'path'
+import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from './constants'
+import { filterImage, formatBytes } from './utils'
 import sharp from 'sharp'
-import { readdirSync, readFileSync, statSync, writeFile } from 'fs'
-import type { PluginOptionsType } from '.'
+import { existsSync, readdirSync, readFileSync, statSync, writeFile } from 'fs'
+import { getCacheKey } from './cache'
 
-export async function pressImage({
-    filePath,
-    outputPath,
-    opt,
-}: {
-    filePath: string
-    outputPath: string
-    opt: PluginOptionsType
-}) {
-    const { ext, base } = parse(filePath)
-    const output = outputPath || filePath
-    if (!IMG_FORMATS.includes(ext)) {
+function checkJPGExt(type: string) {
+    const ext = type.includes('.') ? type.replace('.', '') : type
+    return ext === IMG_FORMATS_ENUM.jpg || ext === IMG_FORMATS_ENUM.jpeg
+        ? 'jpeg'
+        : ext
+}
+
+export async function pressImage(filePath: string, { type, quality }: any) {
+    // filter image
+    if (!filterImage(filePath)) {
         return
     }
-
+    // get buffer
     const buffer = readFileSync(filePath)
-    let image = sharp(buffer)
-
-    if (
-        ext.includes(IMG_FORMATS_ENUM.jpeg) ||
-        ext.includes(IMG_FORMATS_ENUM.jpg)
-    ) {
-        image = image.jpeg(opt.jpgOptions)
-    } else {
-        const format = ext.split('.')[ext.split('.').length - 1]
-        image = image[format](opt[`${format.toLocaleLowerCase()}Options`])
+    const { ext } = parse(filePath)
+    const key = checkJPGExt(type)
+    if (ext.replace('.', '') === type) {
+        return buffer
     }
+    return (await sharp(buffer)[key]({ quality }).toBuffer()) as Buffer
+}
 
-    const compressedBuffer = await image.toBuffer()
-    console.log(
-        `${base}：${formatBytes(buffer.length)} ============> ${formatBytes(
-            compressedBuffer.length
-        )}`
-    )
-    return new Promise((resolve, reject) => {
-        writeFile(output, compressedBuffer, (err) => {
-            if (err) {
-                reject(err)
-                return
-            }
-            resolve(output)
-        })
+export async function pressBufferToImage(
+    buffer: Buffer,
+    { type, quality }: any
+) {
+    const key = checkJPGExt(type)
+
+    const newBuffer = await sharp(buffer)[key]({ quality }).toBuffer()
+
+    return newBuffer
+}
+
+export async function processImage(filePath: string) {
+    const { enableDevWebp, quality, enableWebP, cacheDir } = DEFAULT_CONFIG
+    const { ext, name } = parse(filePath)
+    const type = enableDevWebp ? IMG_FORMATS_ENUM.webp : ext.replace('.', '')
+    const file = readFileSync(filePath)
+    const cacheKey = getCacheKey({
+        name,
+        type,
+        content: file,
+        quality,
+        enableWebP,
     })
-}
-
-export async function getDirFilePath(dir: string) {
-    const pathList: string[] = []
-    const files = readdirSync(dir)
-
-    for (let index = 0; index < files.length; index++) {
-        const path = join(dir, files[index])
-        const isFile = await statSync(path).isFile()
-        if (isFile) {
-            pathList.push(path)
-        } else {
-            const list = await getDirFilePath(path)
-            pathList.push(...list)
-        }
+    const cachePath = join(cacheDir, cacheKey)
+    // 检查是否又缓存
+    if (existsSync(cachePath)) {
+        return readFileSync(cachePath)
     }
 
-    return pathList
-}
+    const buffer = await pressImage(filePath, {
+        type,
+        quality,
+    })
 
-export async function pressDirImage(dir: string, opt: PluginOptionsType) {
-    const pathList: string[] = await getDirFilePath(dir)
-
-    return await Promise.all(
-        pathList
-            .filter((path) => IMG_FORMATS.includes(parse(path).ext))
-            .map((path) => {
-                return pressImage({
-                    filePath: path,
-                    outputPath: path,
-                    opt,
-                })
-            })
-    )
+    if (!buffer) {
+        return
+    }
+    // 缓存图片
+    writeFile(cachePath, buffer, () => {})
+    return buffer
 }

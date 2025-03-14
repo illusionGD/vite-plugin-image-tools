@@ -1,52 +1,92 @@
-import type { Plugin, ResolvedConfig } from 'vite'
-import path from 'path'
-import { DEFAULT_QUALITY, IMG_FORMATS } from './constants'
-import { initQuality } from './utils'
-import { pressDirImage } from './press'
-
-export interface PluginOptionsType {
-    /** 质量：1-100 */
+// vite-plugin-image-compress.ts
+import type { PluginOption, ResolvedConfig } from 'vite'
+import { existsSync, mkdirSync } from 'fs'
+import path, { parse } from 'path'
+import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from './constants'
+import { processImage } from './press'
+import { filterImage, handleImgBundle } from './utils'
+export type PluginOptions = {
     quality?: number
-    /** 图片格式：['png', 'jpg', 'jpeg', 'webp', 'avif', 'gif', 'svg'] */
-    formats?: string[]
-    /** 开发环境是否开启 */
-    devOpen?: boolean
-    /** 缓存路径：devOpen为true生效 */
+    enableDev?: boolean
+    enableDevWebp?: boolean
+    enableWebP?: boolean
+    include?: string[]
+    exclude?: string[]
     cacheDir?: string
-    /** sharp配置 */
-    sharpOptions?: Record<string, any>
-    /** svgo配置 */
-    svgoOptions?: Record<string, any>
-    jpgOptions?: Record<string, any>
-    pngOptions?: Record<string, any>
-    webpOptions?: Record<string, any>
-    avifOptions?: Record<string, any>
-    gifOptions?: Record<string, any>
+    regExp?: string
 }
 
-const defaultConfig: PluginOptionsType = {
-    quality: DEFAULT_QUALITY,
-    formats: IMG_FORMATS,
-}
+export default function ImageTools(options: PluginOptions = {}): PluginOption {
+    // 初始化图片过滤正则
+    if (options && !options.regExp && options.include) {
+        DEFAULT_CONFIG.regExp = `\\.(${options.include.join('|')})$`
+    }
 
-export default function ImageTools(
-    userConfig?: Partial<PluginOptionsType>
-): Plugin {
-    const config = Object.assign({}, defaultConfig, userConfig)
-    initQuality(config)
+    const { enableDevWebp, cacheDir, enableDev } = Object.assign(
+        DEFAULT_CONFIG,
+        options
+    )
+
+    let isBuild = false
     let viteConfig: ResolvedConfig
+    const cachePath = path.resolve(process.cwd(), cacheDir)
+
+    // 创建缓存目录
+    if (!existsSync(cachePath)) {
+        mkdirSync(cachePath, { recursive: true })
+    }
 
     return {
-        name: 'vite:image-tools',
-        configResolved(c: ResolvedConfig) {
-            viteConfig = Object.assign(viteConfig || {}, c)
+        name: 'vite-plugin-image-tools',
+        config(config, { command }) {
+            isBuild = command === 'build'
         },
-        async closeBundle() {
-            const { isProduction, root, build } = viteConfig
-            if (isProduction) {
-                const assetsPath = path.join(root, build.outDir)
-                await pressDirImage(assetsPath, config)
+        configResolved(config) {
+            viteConfig = config
+        },
+        // 开发模式：拦截图片请求，处理图片压缩和转webp
+        configureServer(server) {
+            if (!enableDev) {
+                return
             }
+            server.middlewares.use(async (req, res, next) => {
+                if (!filterImage(req.url)) return next()
+
+                try {
+                    const filePath = decodeURIComponent(
+                        path.resolve(
+                            process.cwd(),
+                            req.url.split('?')[0].slice(1)
+                        )
+                    )
+
+                    // filter image
+                    if (!filterImage(filePath)) {
+                        next()
+                    }
+
+                    const { ext } = parse(filePath)
+                    const type = enableDevWebp
+                        ? IMG_FORMATS_ENUM.webp
+                        : ext.replace('.', '')
+
+                    const buffer = await processImage(filePath)
+
+                    if (!buffer) {
+                        next()
+                    }
+
+                    res.setHeader('Content-Type', `image/${type}`)
+                    res.end(buffer)
+                } catch (e) {
+                    next()
+                }
+            })
+        },
+        // 构建模式：替换最终产物中的资源
+        async generateBundle(_options, bundle) {
+            if (!isBuild) return
+            await handleImgBundle(bundle)
         },
     }
 }

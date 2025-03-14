@@ -7,8 +7,7 @@
         "dev": "vite",
         "build": "vue-tsc -b && vite build",
         "commit": "git add . && git-cz",
-        "push": "npm run commit && git push --follow-tags",
-        "test-build:vue": "set TYPE=vue && npm run build"
+        "push": "npm run commit && git push --follow-tags"
     },
     "keywords": [],
     "author": "",
