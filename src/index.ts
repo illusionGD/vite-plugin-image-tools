@@ -1,22 +1,28 @@
 // vite-plugin-image-compress.ts
 import type { PluginOption, ResolvedConfig } from 'vite'
-import { existsSync, mkdirSync } from 'fs'
-import path, { parse } from 'path'
+import { existsSync, mkdirSync, writeFileSync } from 'fs'
+import path, { join, parse } from 'path'
 import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from './constants'
 import { processImage } from './press'
-import { filterImage, handleImgBundle } from './utils'
+import {
+    filterImage,
+    handleImgBundle,
+    handleImgMap,
+    handleReplaceWebp,
+} from './utils'
 export type PluginOptions = {
-    quality?: number
-    enableDev?: boolean
-    enableDevWebp?: boolean
-    enableWebP?: boolean
-    include?: string[]
-    exclude?: string[]
-    cacheDir?: string
-    regExp?: string
+    quality: number
+    enableDev: boolean
+    enableDevWebp: boolean
+    enableWebP: boolean
+    include: string[]
+    cacheDir: string
+    regExp: string
 }
 
-export default function ImageTools(options: PluginOptions = {}): PluginOption {
+export default function ImageTools(
+    options: Partial<PluginOptions> = {}
+): PluginOption {
     // 初始化图片过滤正则
     if (options && !options.regExp && options.include) {
         DEFAULT_CONFIG.regExp = `\\.(${options.include.join('|')})$`
@@ -50,7 +56,7 @@ export default function ImageTools(options: PluginOptions = {}): PluginOption {
                 return
             }
             server.middlewares.use(async (req, res, next) => {
-                if (!filterImage(req.url)) return next()
+                if (!filterImage(req.url || '')) return next()
 
                 try {
                     const filePath = decodeURIComponent(
@@ -86,7 +92,20 @@ export default function ImageTools(options: PluginOptions = {}): PluginOption {
         // 构建模式：替换最终产物中的资源
         async generateBundle(_options, bundle) {
             if (!isBuild) return
+            // 收集圖片的映射關係
+            handleImgMap(bundle)
+            // 生成webp
             await handleImgBundle(bundle)
+        },
+
+        async writeBundle(opt, bundle) {
+            for (const key in bundle) {
+                const chunk = bundle[key] as any
+                if (/(html)$/.test(key)) {
+                    const htmlCode = handleReplaceWebp(chunk.source)
+                    writeFileSync(join(opt.dir, chunk.fileName), htmlCode)
+                }
+            }
         },
     }
 }

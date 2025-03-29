@@ -1,4 +1,15 @@
 import crypto from 'crypto'
+import { replaceWebpExt } from './utils'
+
+const imgWebpMap = {}
+
+export function addImgWebpMap(name: string) {
+    imgWebpMap[name] = replaceWebpExt(name)
+}
+
+export function getImgWebpMap() {
+    return imgWebpMap
+}
 
 export function getCacheKey({ name, type, content, quality, enableWebP }) {
     const hash = crypto

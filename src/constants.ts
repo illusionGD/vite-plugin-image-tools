@@ -1,4 +1,4 @@
-import { PluginOptions } from '.'
+import type { PluginOptions } from "."
 
 export enum IMG_FORMATS_ENUM {
     png = 'png',

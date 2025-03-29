@@ -1,7 +1,8 @@
 import path, { join, parse } from 'path'
 import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from './constants'
 import { filterImage, formatBytes } from './utils'
-import sharp from 'sharp'
+// import sharp from 'sharp'
+const sharp = require('sharp')
 import { existsSync, readdirSync, readFileSync, statSync, writeFile } from 'fs'
 import { getCacheKey } from './cache'
 
@@ -12,6 +13,19 @@ function checkJPGExt(type: string) {
         : ext
 }
 
+export async function pressBufferToImage(
+    buffer: Buffer,
+    { type, quality }: any
+) {
+    const key = checkJPGExt(type)
+
+    const newBuffer = await sharp(buffer)
+        .toFormat(key as any, { quality })
+        .toBuffer()
+
+    return newBuffer
+}
+
 export async function pressImage(filePath: string, { type, quality }: any) {
     // filter image
     if (!filterImage(filePath)) {
@@ -20,22 +34,14 @@ export async function pressImage(filePath: string, { type, quality }: any) {
     // get buffer
     const buffer = readFileSync(filePath)
     const { ext } = parse(filePath)
-    const key = checkJPGExt(type)
+    // 如果是同一个文件，不必压缩
     if (ext.replace('.', '') === type) {
         return buffer
     }
-    return (await sharp(buffer)[key]({ quality }).toBuffer()) as Buffer
-}
-
-export async function pressBufferToImage(
-    buffer: Buffer,
-    { type, quality }: any
-) {
-    const key = checkJPGExt(type)
-
-    const newBuffer = await sharp(buffer)[key]({ quality }).toBuffer()
-
-    return newBuffer
+    return await pressBufferToImage(buffer, {
+        type,
+        quality,
+    })
 }
 
 export async function processImage(filePath: string) {
