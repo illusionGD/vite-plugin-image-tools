@@ -2,7 +2,6 @@ import path, { join, parse } from 'path'
 import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from './constants'
 import { filterImage, formatBytes, replaceWebpExt } from './utils'
 import sharp from 'sharp'
-// const sharp = require('sharp')
 import { existsSync, readdirSync, readFileSync, statSync, writeFile } from 'fs'
 import { handleReplaceWebp, getCacheKey } from './cache'
 

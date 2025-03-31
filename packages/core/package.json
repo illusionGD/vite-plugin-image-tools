@@ -1,6 +1,6 @@
 {
     "name": "vite-plugin-image-tools",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "",
     "main": "dist/cjs/index.js",
     "module": "dist/es/index.js",
@@ -28,6 +28,10 @@
         "access": "public",
         "directory": "dist"
     },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/illusionGD/vite-plugin-image-tools"
+    },
     "keywords": [
         "vite",
         "sharp",
@@ -35,8 +39,8 @@
         "tools",
         "webp"
     ],
-    "author": "hollow_orld",
-    "license": "ISC",
+    "author": "illusionGD",
+    "license": "MIT",
     "devDependencies": {
         "@rollup/plugin-babel": "^6.0.4",
         "@rollup/plugin-commonjs": "^28.0.3",

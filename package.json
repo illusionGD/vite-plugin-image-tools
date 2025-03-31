@@ -11,7 +11,7 @@
         "commit": "git add . && git-cz",
         "push": "npm run commit && git push --follow-tags",
         "prepare": "husky install",
-        "release": "changeset add && changeset version && npm run push"
+        "release": "changeset add && changeset version"
     },
     "keywords": [
         "vite",
@@ -20,8 +20,8 @@
         "tools",
         "webp"
     ],
-    "author": "",
-    "license": "ISC",
+    "author": "illusionGD",
+    "license": "MIT",
     "devDependencies": {
         "@eslint/js": "^9.23.0",
         "@types/node": "^22.13.9",
