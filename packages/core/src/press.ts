@@ -2,7 +2,6 @@ import path, { join, parse } from 'path'
 import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from './constants'
 import { filterImage, formatBytes, replaceWebpExt } from './utils'
 import sharp from 'sharp'
-// const sharp = require('sharp')
 import { existsSync, readdirSync, readFileSync, statSync, writeFile } from 'fs'
 import { handleReplaceWebp, getCacheKey } from './cache'
 
@@ -45,7 +44,7 @@ export async function pressImage(filePath: string, { type, quality }: any) {
 }
 
 export async function processImage(filePath: string) {
-  const { enableDevWebp, quality, enableWebP, cacheDir } = DEFAULT_CONFIG
+  const { enableDevWebp, quality, enableWebp, cacheDir } = DEFAULT_CONFIG
   const { ext, name } = parse(filePath)
   const type = enableDevWebp ? IMG_FORMATS_ENUM.webp : ext.replace('.', '')
   const file = readFileSync(filePath)
@@ -54,7 +53,7 @@ export async function processImage(filePath: string) {
     type,
     content: file,
     quality,
-    enableWebP
+    enableWebp
   })
   const cachePath = join(cacheDir, cacheKey)
   // 检查是否又缓存
@@ -83,9 +82,9 @@ export async function handleImgBundle(bundle: any) {
   for (const key in bundle) {
     const chunk = bundle[key] as any
     const { ext } = parse(key)
-    const { quality, enableWebP } = DEFAULT_CONFIG
+    const { quality, enableWebp } = DEFAULT_CONFIG
 
-    if (/(js|css|html)$/.test(key) && enableWebP) {
+    if (/(js|css|html)$/.test(key) && enableWebp) {
       if (/(js)$/.test(key)) {
         chunk.code = handleReplaceWebp(chunk.code)
       } else if (/(css|html)$/.test(key)) {
@@ -106,7 +105,7 @@ export async function handleImgBundle(bundle: any) {
     }
 
     // 添加webp图片输出
-    if (enableWebP) {
+    if (enableWebp) {
       const webpBuffer = await pressBufferToImage(chunk.source, {
         type: IMG_FORMATS_ENUM.webp,
         quality

@@ -27,7 +27,7 @@ export default defineConfig({
   plugins: [
     ImageTools({
       quality: 80,
-      enableWebP: true
+      enableWebp: true
     })
   ]
 })
@@ -39,7 +39,7 @@ export default defineConfig({
 | --- | --- | --- | --- |
 | quality | number | 80 | 图片质量 (1-100) |
 | include | string[] | ['png', 'jpg'] | 包含的图片格式：png/jpg/webp等 |
-| enableWebP | boolean | false | 生产环境是否转webp |
+| enableWebp | boolean | false | 生产环境是否转webp |
 | enableDev | boolean | false | 开发环境是否开启压缩 |
 | enableDevWebp | boolean | false | 开发环境是否开启转webp |
 | cacheDir | string | ‘node_modules/.cache/vite-plugin-image’ | 缓存路径， 默认，只在开发环境生效 |

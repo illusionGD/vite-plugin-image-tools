@@ -27,7 +27,7 @@ export default defineConfig({
   plugins: [
     ImageTools({
       quality: 80,
-      enableWebP: true
+      enableWebp: true
     })
   ]
 })
@@ -39,7 +39,7 @@ export default defineConfig({
 | --- | --- | --- | --- |
 | quality | number | 80 | picture quality (1-100) |
 | include | string[] | ['png', 'jpg'] | The image formats are: png/jpg/webp, etc. |
-| enableWebP | boolean | false | Whether to switch to webp in the production environment |
+| enableWebp | boolean | false | Whether to switch to webp in the production environment |
 | enableDev | boolean | false | Whether to enable compression in the development environment |
 | enableDevWebp | boolean | false | Whether to switch to webp in the development environment |
 | cacheDir | string | ‘node_modules/.cache/vite-plugin-image’ | Cache path,this path is valid only in the development environment |

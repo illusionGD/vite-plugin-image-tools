@@ -1,0 +1,20 @@
+{
+  "name": "test_vue",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "vite-plugin-image-tools": "workspace:^",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "sass": "^1.86.0",
+    "vite": "^6.2.0"
+  }
+}
