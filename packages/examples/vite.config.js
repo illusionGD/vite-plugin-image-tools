@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import ImageTools from '@vite-plugin-image-tools/core'
+import ImageTools from 'vite-plugin-image-tools'
 import { resolve } from 'path'
 
 // https://vite.dev/config/

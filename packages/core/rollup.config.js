@@ -11,9 +11,15 @@ export default {
   output: [
     {
       dir: 'dist',
-      entryFileNames: '[name].js',
+      entryFileNames: 'es/[name].js',
       format: 'es',
       sourcemap: true
+    },
+    {
+        dir: 'dist',
+        entryFileNames: 'cjs/[name].js',
+        format: 'cjs',
+        sourcemap: true
     }
   ],
   plugins: [
