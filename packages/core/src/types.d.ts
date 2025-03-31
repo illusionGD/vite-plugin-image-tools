@@ -5,7 +5,7 @@ export type PluginOptions = {
   quality: number
   enableDev: boolean
   enableDevWebp: boolean
-  enableWebP: boolean
+  enableWebp: boolean
   include: string[]
   cacheDir: string
   regExp: string

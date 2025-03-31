@@ -34,11 +34,11 @@ export function handleReplaceWebp(str: string) {
   return temp
 }
 
-export function getCacheKey({ name, type, content, quality, enableWebP }: any) {
+export function getCacheKey({ name, type, content, quality, enableWebp }: any) {
   const hash = crypto
     .createHash('md5')
     .update(content)
-    .update(JSON.stringify({ quality, enableWebP }))
+    .update(JSON.stringify({ quality, enableWebp }))
     .digest('hex')
   return `${name}_${hash.slice(0, 8)}.${type}`
 }
