@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 1.0.4
+
+### Patch Changes
+
+- cicd
+
 ## 1.0.3
 
 ### Patch Changes

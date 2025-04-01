@@ -1,6 +1,6 @@
 {
     "name": "vite-plugin-image-tools",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "description": "",
     "main": "dist/cjs/index.js",
     "module": "dist/esm/index.js",
@@ -23,6 +23,10 @@
         "dist",
         "package.json"
     ],
+    "publishConfig": {
+        "registry": "https://registry.npmjs.org",
+        "access": "public"
+    },
     "repository": {
         "type": "git",
         "url": "https://github.com/illusionGD/vite-plugin-image-tools"
