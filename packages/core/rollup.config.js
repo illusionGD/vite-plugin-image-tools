@@ -11,8 +11,8 @@ export default {
   output: [
     {
       dir: 'dist',
-      entryFileNames: 'es/[name].js',
-      format: 'es',
+      entryFileNames: 'esm/[name].js',
+      format: 'esm',
       sourcemap: true
     },
     {

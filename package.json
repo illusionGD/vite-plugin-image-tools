@@ -10,8 +10,7 @@
         "lint": "eslint --fix",
         "commit": "git add . && git-cz",
         "push": "npm run commit && git push --follow-tags",
-        "prepare": "husky install",
-        "release": "changeset add && changeset version"
+        "prepare": "husky install"
     },
     "keywords": [
         "vite",
