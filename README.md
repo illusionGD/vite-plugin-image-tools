@@ -6,7 +6,7 @@
 
 vite plug-in, support image compression and automatic webp, currently only support png, jpg, jpeg, webp
 
-## feature
+## Feature
 
 - Supports compression and webp image generation in production environment
 
@@ -15,7 +15,15 @@ vite plug-in, support image compression and automatic webp, currently only suppo
 - Configure image compression quality
 
 ## Installation
+installation sharp
+```bash
+npm i -D sharp
+```
 
+installation vite-plugin-image-tools
+```bash
+npm i -D vite-plugin-image-tools
+```
 ## Useage
 
 ```js
