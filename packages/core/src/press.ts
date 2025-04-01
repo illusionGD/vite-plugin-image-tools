@@ -26,17 +26,13 @@ export async function pressBufferToImage(
 }
 
 export async function pressImage(filePath: string, { type, quality }: any) {
-  // filter image
-  if (!filterImage(filePath)) {
-    return
-  }
-  // get buffer
   const buffer = readFileSync(filePath)
   const { ext } = parse(filePath)
-  // 如果是同一个文件，不必压缩
+
   if (ext.replace('.', '') === type) {
     return buffer
   }
+
   return await pressBufferToImage(buffer, {
     type,
     quality
@@ -56,7 +52,7 @@ export async function processImage(filePath: string) {
     enableWebp
   })
   const cachePath = join(cacheDir, cacheKey)
-  // 检查是否又缓存
+
   if (existsSync(cachePath)) {
     return readFileSync(cachePath)
   }
@@ -69,15 +65,10 @@ export async function processImage(filePath: string) {
   if (!buffer) {
     return
   }
-  // 缓存图片
   writeFile(cachePath, buffer, () => {})
   return buffer
 }
 
-/**
- * 处理image的bundle，压缩图片buffer & 添加或替换图片的webp chunk
- * @param bundle
- */
 export async function handleImgBundle(bundle: any) {
   for (const key in bundle) {
     const chunk = bundle[key] as any
@@ -104,7 +95,6 @@ export async function handleImgBundle(bundle: any) {
       chunk.source = pressBuffer
     }
 
-    // 添加webp图片输出
     if (enableWebp) {
       const webpBuffer = await pressBufferToImage(chunk.source, {
         type: IMG_FORMATS_ENUM.webp,

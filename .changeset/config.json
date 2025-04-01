@@ -7,5 +7,6 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["test_vue"]
+  "ignore": ["test_vue"],
+  "autoTag": true
 }
