@@ -49,6 +49,25 @@ importers:
         specifier: ^8.28.0
         version: 8.28.0(eslint@9.23.0(jiti@2.4.2))(typescript@5.7.3)
 
+  examples/test_vue:
+    dependencies:
+      vite-plugin-image-tools:
+        specifier: workspace:^
+        version: link:../../packages/core
+      vue:
+        specifier: ^3.5.13
+        version: 3.5.13(typescript@5.7.3)
+    devDependencies:
+      '@vitejs/plugin-vue':
+        specifier: ^5.2.1
+        version: 5.2.1(vite@6.2.0(@types/node@22.13.9)(jiti@2.4.2)(sass@1.86.0)(terser@5.39.0)(yaml@2.7.1))(vue@3.5.13(typescript@5.7.3))
+      sass:
+        specifier: ^1.86.0
+        version: 1.86.0
+      vite:
+        specifier: ^6.2.0
+        version: 6.2.0(@types/node@22.13.9)(jiti@2.4.2)(sass@1.86.0)(terser@5.39.0)(yaml@2.7.1)
+
   packages/core:
     dependencies:
       sharp:
@@ -82,26 +101,6 @@ importers:
       rimraf:
         specifier: ^6.0.1
         version: 6.0.1
-    publishDirectory: dist
-
-  packages/examples:
-    dependencies:
-      vue:
-        specifier: ^3.5.13
-        version: 3.5.13(typescript@5.7.3)
-    devDependencies:
-      '@vitejs/plugin-vue':
-        specifier: ^5.2.1
-        version: 5.2.1(vite@6.2.0(@types/node@22.13.9)(jiti@2.4.2)(sass@1.86.0)(terser@5.39.0)(yaml@2.7.1))(vue@3.5.13(typescript@5.7.3))
-      sass:
-        specifier: ^1.86.0
-        version: 1.86.0
-      vite:
-        specifier: ^6.2.0
-        version: 6.2.0(@types/node@22.13.9)(jiti@2.4.2)(sass@1.86.0)(terser@5.39.0)(yaml@2.7.1)
-      vite-plugin-image-tools:
-        specifier: workspace:^
-        version: link:../core/dist
 
 packages:
 
