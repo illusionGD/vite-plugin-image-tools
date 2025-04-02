@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 1.0.5
+
+### Patch Changes
+
+- format tags
+
 ## 1.0.4
 
 ### Patch Changes

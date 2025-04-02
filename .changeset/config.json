@@ -8,5 +8,6 @@
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "ignore": ["test_vue"],
-  "autoTag": true
+  "autoTag": true,
+  "tagTemplate": "v${version}"
 }
