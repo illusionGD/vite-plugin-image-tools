@@ -11,7 +11,8 @@
         "commit": "git add . && git-cz",
         "push": "npm run commit && git push --follow-tags",
         "prepare": "husky install",
-        "release": "changeset add && changeset version"
+        "release": "changeset add && changeset version",
+        "publish:release": "npm run release && npm run push"
     },
     "keywords": [
         "vite",
