@@ -6,19 +6,20 @@ import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from './constants'
 import { processImage, handleImgBundle } from './press'
 import { filterImage } from './utils'
 import type { PluginOptions } from './types'
-import { handleImgMap, handleReplaceWebp } from './cache'
+import { getGlobalConfig, handleImgMap, handleReplaceWebp, setGlobalConfig } from './cache'
 
 export default function ImageTools(
   options: Partial<PluginOptions> = {}
 ): PluginOption {
+  const globalConfig = getGlobalConfig()
+
   if (options && !options.regExp && options.include) {
-    DEFAULT_CONFIG.regExp = `\\.(${options.include.join('|')})$`
+    globalConfig.regExp = `\\.(${options.include.join('|')})$`
   }
 
-  const { enableDevWebp, cacheDir, enableDev } = Object.assign(
-    DEFAULT_CONFIG,
-    options
-  )
+  setGlobalConfig(options)
+  
+  const { enableDevWebp, cacheDir, enableDev } = getGlobalConfig()
 
   let isBuild = false
   const cachePath = path.resolve(process.cwd(), cacheDir)

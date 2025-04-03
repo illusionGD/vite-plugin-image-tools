@@ -1,6 +1,6 @@
 import { extname, parse } from 'path'
-import { DEFAULT_CONFIG } from './constants'
-import { addImgWebpMap, getImgWebpMap } from './cache'
+import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from './constants'
+import { addImgWebpMap, getGlobalConfig, getImgWebpMap } from './cache'
 import { AnyObject } from './types'
 
 export function formatBytes(bytes: number) {
@@ -10,29 +10,14 @@ export function formatBytes(bytes: number) {
 }
 
 export function filterImage(filePath: string) {
-  const reg = new RegExp(DEFAULT_CONFIG.regExp)
+  const reg = new RegExp(getGlobalConfig().regExp)
+  const { ext } = parse(filePath)
+
+  if (!IMG_FORMATS_ENUM[ext.replace('.', '')]) {
+    return
+  }
 
   return reg.test(filePath)
-}
-
-export function deepClone(obj: any): any {
-  if (!obj || typeof obj !== 'object') {
-    return obj
-  }
-
-  if (Array.isArray(obj)) {
-    return obj.map(deepClone(obj))
-  }
-
-  const newObj: AnyObject = {}
-
-  for (const key in obj) {
-    if (obj.hasOwnProperty(key)) {
-      newObj[key] = deepClone(obj[key])
-    }
-  }
-
-  return newObj
 }
 
 export function replaceWebpExt(url: string) {

@@ -1,79 +1,73 @@
 import path, { join, parse } from 'path'
 import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from './constants'
 import { filterImage, formatBytes, replaceWebpExt } from './utils'
-import sharp from 'sharp'
+import sharp, { type FormatEnum } from 'sharp'
 import { existsSync, readdirSync, readFileSync, statSync, writeFile } from 'fs'
-import { handleReplaceWebp, getCacheKey } from './cache'
+import { handleReplaceWebp, getCacheKey, getGlobalConfig } from './cache'
+import { ImgFormatType, SharpOptionsType } from './types'
 
-function checkJPGExt(type: string) {
+function checkJPGExt(type: string): ImgFormatType {
   const ext = type.includes('.') ? type.replace('.', '') : type
   return ext === IMG_FORMATS_ENUM.jpg || ext === IMG_FORMATS_ENUM.jpeg
     ? 'jpeg'
-    : ext
+    : (ext as ImgFormatType)
 }
 
 export async function pressBufferToImage(
   buffer: Buffer,
-  { type, quality }: any
+  type: ImgFormatType,
+  opt?: SharpOptionsType
 ) {
   const key = checkJPGExt(type)
 
-  const newBuffer = await sharp(buffer)
-    .toFormat(key as any, { quality })
-    .toBuffer()
+  const globalConfig = getGlobalConfig()
+  const options = Object.assign({ quality: globalConfig.quality }, opt || {})
+  const newBuffer = await sharp(buffer).toFormat(key, options).toBuffer()
 
   return newBuffer
 }
 
-export async function pressImage(filePath: string, { type, quality }: any) {
-  const buffer = readFileSync(filePath)
-  const { ext } = parse(filePath)
-
-  if (ext.replace('.', '') === type) {
-    return buffer
-  }
-
-  return await pressBufferToImage(buffer, {
-    type,
-    quality
-  })
-}
-
 export async function processImage(filePath: string) {
-  const { enableDevWebp, quality, enableWebp, cacheDir } = DEFAULT_CONFIG
+  const { enableDevWebp, quality, enableWebp, cacheDir, sharpConfig } =
+    getGlobalConfig()
   const { ext, name } = parse(filePath)
-  const type = enableDevWebp ? IMG_FORMATS_ENUM.webp : ext.replace('.', '')
+  const type = enableDevWebp
+    ? IMG_FORMATS_ENUM.webp
+    : (ext.replace('.', '') as ImgFormatType)
   const file = readFileSync(filePath)
-  const cacheKey = getCacheKey({
-    name,
-    type,
-    content: file,
-    quality,
-    enableWebp
-  })
+  const cacheKey = getCacheKey(
+    {
+      name,
+      type,
+      content: file
+    },
+    { quality, enableWebp, sharpConfig, enableDevWebp, type }
+  )
   const cachePath = join(cacheDir, cacheKey)
 
+  // read cache
   if (existsSync(cachePath)) {
     return readFileSync(cachePath)
   }
 
-  const buffer = await pressImage(filePath, {
-    type,
-    quality
-  })
+  const buffer = readFileSync(filePath)
 
-  if (!buffer) {
+  const newBuffer = await pressBufferToImage(buffer, type, sharpConfig[type])
+
+  if (!newBuffer) {
     return
   }
-  writeFile(cachePath, buffer, () => {})
-  return buffer
+
+  writeFile(cachePath, newBuffer, () => {})
+
+  return newBuffer
 }
 
 export async function handleImgBundle(bundle: any) {
   for (const key in bundle) {
     const chunk = bundle[key] as any
     const { ext } = parse(key)
-    const { quality, enableWebp } = DEFAULT_CONFIG
+    const { enableWebp, sharpConfig } = getGlobalConfig()
 
     if (/(js|css|html)$/.test(key) && enableWebp) {
       if (/(js)$/.test(key)) {
@@ -88,18 +82,21 @@ export async function handleImgBundle(bundle: any) {
     }
 
     if (chunk.source && chunk.source instanceof Buffer) {
-      const pressBuffer = await pressBufferToImage(chunk.source, {
-        type: ext,
-        quality
-      })
+      const format = ext.replace('.', '') as ImgFormatType
+      const pressBuffer = await pressBufferToImage(
+        chunk.source,
+        format,
+        sharpConfig[format]
+      )
       chunk.source = pressBuffer
     }
 
     if (enableWebp) {
-      const webpBuffer = await pressBufferToImage(chunk.source, {
-        type: IMG_FORMATS_ENUM.webp,
-        quality
-      })
+      const webpBuffer = await pressBufferToImage(
+        chunk.source,
+        IMG_FORMATS_ENUM.webp,
+        sharpConfig[IMG_FORMATS_ENUM.webp]
+      )
       const webpName = replaceWebpExt(key)
       const webpChunk = structuredClone(chunk)
       webpChunk.source = webpBuffer
