@@ -10,9 +10,11 @@ import type {
   GifOptions,
   OutputOptions
 } from 'sharp'
+
 export type AnyObject = {
   [key: string | number | symbol]: any
 }
+
 interface sharpConfigType {
   jpeg?: JpegOptions
   jpg?: JpegOptions
@@ -22,6 +24,7 @@ interface sharpConfigType {
   tiff?: TiffOptions
   gif?: GifOptions
 }
+
 export type PluginOptions = {
   quality: number
   enableDev: boolean
@@ -29,7 +32,6 @@ export type PluginOptions = {
   enableWebp: boolean
   include: string[]
   cacheDir: string
-  regExp: string
   sharpConfig: sharpConfigType
 }
 

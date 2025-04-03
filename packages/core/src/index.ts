@@ -13,12 +13,12 @@ export default function ImageTools(
 ): PluginOption {
   const globalConfig = getGlobalConfig()
 
-  if (options && !options.regExp && options.include) {
-    globalConfig.regExp = `\\.(${options.include.join('|')})$`
-  }
+//   if (options && !options.regExp && options.include) {
+//     globalConfig.regExp = `\\.(${options.include.join('|')})$`
+//   }
 
   setGlobalConfig(options)
-  
+
   const { enableDevWebp, cacheDir, enableDev } = getGlobalConfig()
 
   let isBuild = false

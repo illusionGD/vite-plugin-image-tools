@@ -15,15 +15,19 @@ vite插件，支持图片压缩和自动转webp，目前只支持png、jpg、jpe
 - 支持配置图片压缩质量
 
 ## 安装
+
 安装 sharp
+
 ```bash
 npm i -D sharp
 ```
 
 安装 vite-plugin-image-tools
+
 ```bash
 npm i -D vite-plugin-image-tools
 ```
+
 ## 使用
 
 ```js
@@ -43,12 +47,11 @@ export default defineConfig({
 
 ## Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| quality | number | 80 | 图片质量 (1-100) |
-| include | string[] | ['png', 'jpg'] | 包含的图片格式：png/jpg/webp等 |
-| enableWebp | boolean | false | 生产环境是否转webp |
-| enableDev | boolean | false | 开发环境是否开启压缩 |
-| enableDevWebp | boolean | false | 开发环境是否开启转webp |
-| cacheDir | string | ‘node_modules/.cache/vite-plugin-image’ | 缓存路径， 默认，只在开发环境生效 |
-| regExp |  |  | 正则表达式，用于过滤图片格式 |
+| Option        | Type     | Default                                 | Description           |
+| ------------- | -------- | --------------------------------------- | --------------------- |
+| quality       | number   | 80                                      | 图片质量 (1-100)          |
+| include       | string[] | ['png', 'jpg']                          | 包含的图片格式：png/jpg/webp等 |
+| enableWebp    | boolean  | false                                   | 生产环境是否转webp           |
+| enableDev     | boolean  | false                                   | 开发环境是否开启压缩            |
+| enableDevWebp | boolean  | false                                   | 开发环境是否开启转webp         |
+| cacheDir      | string   | ‘node_modules/.cache/vite-plugin-image’ | 缓存路径， 默认，只在开发环境生效     |

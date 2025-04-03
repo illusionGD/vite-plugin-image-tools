@@ -23,7 +23,6 @@ export const DEFAULT_CONFIG: PluginOptions = {
   enableDev: false,
   enableDevWebp: false,
   enableWebp: false,
-  regExp: `\\.(${imgFormats.join('|')})$`,
   include: imgFormats,
   cacheDir: 'node_modules/.cache/vite-plugin-image',
   sharpConfig: {}

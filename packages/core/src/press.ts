@@ -1,6 +1,6 @@
 import path, { join, parse } from 'path'
 import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from './constants'
-import { filterImage, formatBytes, replaceWebpExt } from './utils'
+import { filterImage, replaceWebpExt } from './utils'
 import sharp, { type FormatEnum } from 'sharp'
 import { existsSync, readdirSync, readFileSync, statSync, writeFile } from 'fs'
 import { handleReplaceWebp, getCacheKey, getGlobalConfig } from './cache'
