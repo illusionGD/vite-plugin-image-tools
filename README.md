@@ -15,15 +15,19 @@ vite plug-in, support image compression and automatic webp, currently only suppo
 - Configure image compression quality
 
 ## Installation
+
 installation sharp
+
 ```bash
 npm i -D sharp
 ```
 
 installation vite-plugin-image-tools
+
 ```bash
 npm i -D vite-plugin-image-tools
 ```
+
 ## Useage
 
 ```js
@@ -43,12 +47,11 @@ export default defineConfig({
 
 ## Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| quality | number | 80 | picture quality (1-100) |
-| include | string[] | ['png', 'jpg'] | The image formats are: png/jpg/webp, etc. |
-| enableWebp | boolean | false | Whether to switch to webp in the production environment |
-| enableDev | boolean | false | Whether to enable compression in the development environment |
-| enableDevWebp | boolean | false | Whether to switch to webp in the development environment |
-| cacheDir | string | ‘node_modules/.cache/vite-plugin-image’ | Cache path,this path is valid only in the development environment |
-| regExp |  |  | regExp is a regular expression used to filter images in the format |
+| Option        | Type     | Default                                 | Description                                                       |
+| ------------- | -------- | --------------------------------------- | ----------------------------------------------------------------- |
+| quality       | number   | 80                                      | picture quality (1-100)                                           |
+| include       | string[] | ['png', 'jpg']                          | The image formats are: png/jpg/webp, etc.                         |
+| enableWebp    | boolean  | false                                   | Whether to switch to webp in the production environment           |
+| enableDev     | boolean  | false                                   | Whether to enable compression in the development environment      |
+| enableDevWebp | boolean  | false                                   | Whether to switch to webp in the development environment          |
+| cacheDir      | string   | ‘node_modules/.cache/vite-plugin-image’ | Cache path,this path is valid only in the development environment |

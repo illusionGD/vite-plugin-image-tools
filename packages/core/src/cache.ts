@@ -1,8 +1,19 @@
 import crypto from 'crypto'
 import { filterImage, replaceWebpExt } from './utils'
 import { parse } from 'path'
+import { AnyObject, PluginOptions } from './types'
+import { DEFAULT_CONFIG } from './constants'
 
 const imgWebpMap: { [key: string]: string } = {}
+const globalConfig: PluginOptions = JSON.parse(JSON.stringify(DEFAULT_CONFIG))
+
+export function getGlobalConfig() {
+    return  globalConfig
+}
+
+export function setGlobalConfig(config: Partial<PluginOptions>) {
+    Object.assign(globalConfig, DEFAULT_CONFIG, config)
+}
 
 export function addImgWebpMap(name: string) {
   imgWebpMap[name] = replaceWebpExt(name)
@@ -34,11 +45,11 @@ export function handleReplaceWebp(str: string) {
   return temp
 }
 
-export function getCacheKey({ name, type, content, quality, enableWebp }: any) {
+export function getCacheKey({ name, type, content}: any, factor: AnyObject) {
   const hash = crypto
     .createHash('md5')
     .update(content)
-    .update(JSON.stringify({ quality, enableWebp }))
+    .update(JSON.stringify(factor))
     .digest('hex')
   return `${name}_${hash.slice(0, 8)}.${type}`
 }

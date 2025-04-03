@@ -19,5 +19,13 @@ export default defineConfig({
     enableWebp: true,
     enableDev: true,
     enableDevWebp: true,
+    sharpConfig: {
+        jpg: {
+            quality: 10
+        },
+        png: {
+            quality: 70
+        }
+    }
   })],
 })
