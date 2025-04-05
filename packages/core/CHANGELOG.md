@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 1.1.0
+
+### Minor Changes
+
+- config hmr and support multiple image format configurations
+
 ## 1.0.5
 
 ### Patch Changes
