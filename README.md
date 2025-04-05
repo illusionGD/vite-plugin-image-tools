@@ -10,7 +10,7 @@
 
 **English** | [中文](./README.zh-CN.md)
 
-vite plug-in, support image compression and automatic webp, currently only support png, jpg, jpeg, webp
+vite plug-in, support image compression and automatic webp, currently only support 'png', 'jpg', 'webp', 'avif', 'tiff', 'gif'
 
 ## Feature
 
@@ -50,7 +50,7 @@ export default defineConfig({
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | quality | number | 80 | picture quality (1-100) |
-| include | string[] | ['png', 'jpg'] | The image formats are: png/jpg/webp, etc. |
+| include | string[] | ['png', 'jpg', 'webp', 'avif', 'tiff', 'gif'] | The image formats are: png/jpg/webp..., etc. |
 | enableWebp | boolean | false | Whether to switch to webp in the production environment |
 | enableDev | boolean | false | Whether to enable compression in the development environment |
 | enableDevWebp | boolean | false | Whether to switch to webp in the development environment |
