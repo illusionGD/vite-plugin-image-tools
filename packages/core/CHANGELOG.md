@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 1.1.1
+
+### Patch Changes
+
+- bug: enableWebp no effective in html file
+
 ## 1.1.0
 
 ### Minor Changes
