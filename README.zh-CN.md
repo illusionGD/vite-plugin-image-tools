@@ -30,17 +30,35 @@ npm i -D vite-plugin-image-tools
 
 ## 使用
 
-```js
+```ts
 // vite.config.js
 import { defineConfig } from 'vite'
-import ImageTools from 'vite-plugin-image-tools'
+import ImageTools, {PluginOptions} from 'vite-plugin-image-tools'
+
+// type PluginOptions = {
+//   quality: number
+//   enableDev: boolean
+//   enableDevWebp: boolean
+//   enableWebp: boolean
+//   include: string[]
+//   cacheDir: string
+//   sharpConfig: {
+//   jpeg?: JpegOptions
+//   jpg?: JpegOptions
+//   png?: PngOptions
+//   webp?: WebpOptions
+//   avif?: AvifOptions
+//   tiff?: TiffOptions
+//   gif?: GifOptions
+// }
+// }
 
 export default defineConfig({
   plugins: [
     ImageTools({
       quality: 80,
       enableWebp: true
-    })
+    } as Partial<PluginOptions>)
   ]
 })
 ```
@@ -55,3 +73,4 @@ export default defineConfig({
 | enableDev | boolean | false | 开发环境是否开启压缩 |
 | enableDevWebp | boolean | false | 开发环境是否开启转webp |
 | cacheDir | string | ‘node_modules/.cache/vite-plugin-image’ | 缓存路径， 默认，只在开发环境生效 |
+| sharpConfig | Object | {} | [sharp配置](https://sharp.pixelplumbing.com/api-output/#_top) |
