@@ -5,27 +5,30 @@ import { resolve } from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
-    build: {
-        rollupOptions: {
-            input: {
-                index: resolve(__dirname, 'index.html'),
-                index_2: resolve(__dirname, 'index_2.html'),
-                test: resolve(__dirname, './src/pages/test.html'),
-            }
-        }
-    },
-  plugins: [vue(),ImageTools({
-    quality: 80,
-    enableWebp: true,
-    enableDev: true,
-    enableDevWebp: true,
-    sharpConfig: {
+  build: {
+    rollupOptions: {
+      input: {
+        index: resolve(__dirname, 'index.html'),
+        index_2: resolve(__dirname, 'index_2.html'),
+        test: resolve(__dirname, './src/pages/test.html')
+      }
+    }
+  },
+  plugins: [
+    vue(),
+    ImageTools({
+      quality: 80,
+      enableWebp: false,
+      enableDev: true,
+      enableDevWebp: true,
+      sharpConfig: {
         jpg: {
-            quality: 10
+          quality: 10
         },
         png: {
-            quality: 70
+          quality: 70
         }
-    }
-  })],
+      }
+    })
+  ]
 })

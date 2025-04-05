@@ -16,12 +16,6 @@ import {
 export default function ImageTools(
   options: Partial<PluginOptions> = {}
 ): PluginOption {
-  // const globalConfig = getGlobalConfig()
-
-  //   if (options && !options.regExp && options.include) {
-  //     globalConfig.regExp = `\\.(${options.include.join('|')})$`
-  //   }
-
   setGlobalConfig(options)
 
   const { enableDevWebp, cacheDir, enableDev } = getGlobalConfig()
@@ -80,6 +74,10 @@ export default function ImageTools(
       await handleImgBundle(bundle)
     },
     async writeBundle(opt, bundle) {
+      const { enableWebp } = getGlobalConfig()
+      if (!enableWebp) {
+        return
+      }
       for (const key in bundle) {
         const chunk = bundle[key] as any
 
