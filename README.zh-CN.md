@@ -30,19 +30,19 @@ npm i -D vite-plugin-image-tools
 
 ## 使用
 
-```ts
+```js
 // vite.config.js
 import { defineConfig } from 'vite'
-import ImageTools, {PluginOptions} from 'vite-plugin-image-tools'
+import VitePluginImageTools from 'vite-plugin-image-tools'
 
 // type PluginOptions = {
-//   quality: number
-//   enableDev: boolean
-//   enableDevWebp: boolean
-//   enableWebp: boolean
-//   include: string[]
-//   cacheDir: string
-//   sharpConfig: {
+//   quality?: number
+//   enableDev?: boolean
+//   enableDevWebp?: boolean
+//   enableWebp?: boolean
+//   include?: string[]
+//   cacheDir?: string
+//   sharpConfig?: {
 //   jpeg?: JpegOptions
 //   jpg?: JpegOptions
 //   png?: PngOptions
@@ -55,10 +55,10 @@ import ImageTools, {PluginOptions} from 'vite-plugin-image-tools'
 
 export default defineConfig({
   plugins: [
-    ImageTools({
+    VitePluginImageTools({
       quality: 80,
       enableWebp: true
-    } as Partial<PluginOptions>)
+    })
   ]
 })
 ```
