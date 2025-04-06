@@ -31,7 +31,7 @@ npm i -D vite-plugin-image-tools
 ## Usage
 
 ```ts
-// vite.config.js
+// vite.config.ts
 import { defineConfig } from 'vite'
 import ImageTools, {PluginOptions} from 'vite-plugin-image-tools'
 
