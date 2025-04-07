@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 1.1.2
+
+### Patch Changes
+
+- bug: include no effective
+
 ## 1.1.1
 
 ### Patch Changes
