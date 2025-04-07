@@ -4,8 +4,12 @@ import { addImgWebpMap, getGlobalConfig, getImgWebpMap } from './cache'
 
 export function filterImage(filePath: string) {
   const { ext } = parse(filePath)
-
-  return !!IMG_FORMATS_ENUM[ext.replace('.', '')]
+  const {include} = getGlobalConfig()
+  const format = ext.replace('.', '')
+  if (!IMG_FORMATS_ENUM[format]) {
+    return false
+  }
+  return include.includes(format)
 }
 
 export function replaceWebpExt(url: string) {
