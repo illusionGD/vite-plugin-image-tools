@@ -6,7 +6,7 @@ import img from './assets/import.jpg'
   <div>
     <!-- <img src="./assets/image.png" alt=""> -->
     <div class="test-css-img"></div>
-    <img :src="img">
+    <img :src="img" />
   </div>
 </template>
 
@@ -24,8 +24,8 @@ import img from './assets/import.jpg'
   filter: drop-shadow(0 0 2em #42b883aa);
 }
 .test-css-img {
-    background-image: url('./assets/css.jpg');
-    width: 1146px;
-    height: 717px;
+  background-image: url('./assets/css.jpg');
+  width: 1146px;
+  height: 717px;
 }
 </style>

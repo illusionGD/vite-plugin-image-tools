@@ -3,7 +3,12 @@ import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from './constants'
 import { filterImage, replaceWebpExt } from './utils'
 import sharp, { type FormatEnum } from 'sharp'
 import { existsSync, readdirSync, readFileSync, statSync, writeFile } from 'fs'
-import { handleReplaceWebp, getCacheKey, getGlobalConfig } from './cache'
+import {
+  handleReplaceWebp,
+  getCacheKey,
+  getGlobalConfig,
+  getImgWebpMap
+} from './cache'
 import { ImgFormatType, SharpOptionsType } from './types'
 
 function checkJPGExt(type: string): ImgFormatType {
@@ -28,7 +33,7 @@ export async function pressBufferToImage(
 }
 
 export async function processImage(filePath: string) {
-  const { enableDevWebp, quality, enableWebp, cacheDir, sharpConfig } =
+  const { enableDevWebp, quality, enableWebp, cacheDir, sharpConfig, filter } =
     getGlobalConfig()
   const { ext, name } = parse(filePath)
   const type = enableDevWebp
@@ -41,7 +46,14 @@ export async function processImage(filePath: string) {
       type,
       content: file
     },
-    { quality, enableWebp, sharpConfig, enableDevWebp, type }
+    {
+      quality,
+      enableWebp,
+      sharpConfig,
+      enableDevWebp,
+      type,
+      isFilter: !!filter
+    }
   )
   const cachePath = join(cacheDir, cacheKey)
 
@@ -67,7 +79,7 @@ export async function handleImgBundle(bundle: any) {
   for (const key in bundle) {
     const chunk = bundle[key] as any
     const { ext } = parse(key)
-    const { enableWebp, sharpConfig } = getGlobalConfig()
+    const { enableWebp, sharpConfig, filter } = getGlobalConfig()
 
     if (/(js|css|html)$/.test(key) && enableWebp) {
       if (/(js)$/.test(key)) {
@@ -79,6 +91,13 @@ export async function handleImgBundle(bundle: any) {
 
     if (!filterImage(key)) {
       continue
+    }
+
+    if (filter && filter instanceof Function) {
+      const isTrue = filter(chunk.originalFileNames[0])
+      if (!isTrue) {
+        continue
+      }
     }
 
     if (chunk.source && chunk.source instanceof Buffer) {

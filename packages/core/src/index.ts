@@ -16,15 +16,9 @@ import {
 export default function ImageTools(
   options: Partial<PluginOptions> = {}
 ): PluginOption {
-  // const globalConfig = getGlobalConfig()
-
-  //   if (options && !options.regExp && options.include) {
-  //     globalConfig.regExp = `\\.(${options.include.join('|')})$`
-  //   }
-
   setGlobalConfig(options)
 
-  const { enableDevWebp, cacheDir, enableDev } = getGlobalConfig()
+  const { enableDevWebp, cacheDir, enableDev, filter } = getGlobalConfig()
 
   let isBuild = false
   const cachePath = path.resolve(process.cwd(), cacheDir)
@@ -43,15 +37,19 @@ export default function ImageTools(
         return
       }
       server.middlewares.use(async (req, res, next) => {
-        if (!filterImage(req.url || '')) return next()
+        const url = req.url || ''
+        if (!filterImage(url)) return next()
 
         try {
           const filePath = decodeURIComponent(
-            path.resolve(process.cwd(), req.url?.split('?')[0].slice(1) || '')
+            path.resolve(process.cwd(), url.split('?')[0].slice(1) || '')
           )
 
-          if (!filterImage(filePath)) {
-            next()
+          if (filter && filter instanceof Function) {
+            const isTrue = filter(url)
+            if (!isTrue) {
+              return next()
+            }
           }
 
           const { ext } = parse(filePath)
@@ -62,13 +60,13 @@ export default function ImageTools(
           const buffer = await processImage(filePath)
 
           if (!buffer) {
-            next()
+            return next()
           }
 
           res.setHeader('Content-Type', `image/${type}`)
           res.end(buffer)
         } catch (e) {
-          next()
+          return next()
         }
       })
     },

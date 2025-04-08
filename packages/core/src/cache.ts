@@ -8,11 +8,11 @@ const imgWebpMap: { [key: string]: string } = {}
 const globalConfig: PluginOptions = JSON.parse(JSON.stringify(DEFAULT_CONFIG))
 
 export function getGlobalConfig() {
-    return  globalConfig
+  return globalConfig
 }
 
 export function setGlobalConfig(config: Partial<PluginOptions>) {
-    Object.assign(globalConfig, DEFAULT_CONFIG, config)
+  Object.assign(globalConfig, DEFAULT_CONFIG, config)
 }
 
 export function addImgWebpMap(name: string) {
@@ -30,6 +30,15 @@ export function handleImgMap(bundle: any) {
     if (!filterImage(key)) {
       continue
     }
+
+    const { filter } = getGlobalConfig()
+    if (filter && filter instanceof Function) {
+      const isTrue = filter(chunk.originalFileNames[0])
+      if (!isTrue) {
+        continue
+      }
+    }
+
     const { fileName } = chunk
     const { base } = parse(fileName)
     addImgWebpMap(base)
@@ -45,7 +54,7 @@ export function handleReplaceWebp(str: string) {
   return temp
 }
 
-export function getCacheKey({ name, type, content}: any, factor: AnyObject) {
+export function getCacheKey({ name, type, content }: any, factor: AnyObject) {
   const hash = crypto
     .createHash('md5')
     .update(content)

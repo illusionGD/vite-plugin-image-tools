@@ -33,6 +33,7 @@ export type PluginOptions = {
   include: string[]
   cacheDir: string
   sharpConfig: sharpConfigType
+  filter?: (path: string) => boolean
 }
 
 export type ImgFormatType = keyof sharpConfigType
