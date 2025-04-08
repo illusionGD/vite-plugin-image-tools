@@ -45,7 +45,7 @@ export default function ImageTools(
           )
 
           if (!filterImage(filePath)) {
-            next()
+            return next()
           }
 
           const { ext } = parse(filePath)
@@ -56,13 +56,13 @@ export default function ImageTools(
           const buffer = await processImage(filePath)
 
           if (!buffer) {
-            next()
+            return next()
           }
 
           res.setHeader('Content-Type', `image/${type}`)
           res.end(buffer)
         } catch (e) {
-          next()
+          return next()
         }
       })
     },
