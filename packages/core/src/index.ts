@@ -121,6 +121,10 @@ export default function ImageTools(
       await handleImgBundle(bundle)
     },
     async writeBundle(opt, bundle) {
+      const { enableWebp } = getGlobalConfig()
+      if (!enableWebp) {
+        return
+      }
       for (const key in bundle) {
         const chunk = bundle[key] as any
 

@@ -8,7 +8,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-vite插件，支持图片压缩和自动转webp，目前只支持png、jpg、jpeg、webp
+vite插件，支持图片压缩和自动转webp，目前只支持'png', 'jpg', 'webp', 'avif', 'tiff', 'gif'
 
 ## 特性
 
@@ -33,11 +33,29 @@ npm i -D vite-plugin-image-tools
 ```js
 // vite.config.js
 import { defineConfig } from 'vite'
-import ImageTools from 'vite-plugin-image-tools'
+import VitePluginImageTools from 'vite-plugin-image-tools'
+
+// type PluginOptions = {
+//   quality?: number
+//   enableDev?: boolean
+//   enableDevWebp?: boolean
+//   enableWebp?: boolean
+//   include?: string[]
+//   cacheDir?: string
+//   sharpConfig?: {
+//   jpeg?: JpegOptions
+//   jpg?: JpegOptions
+//   png?: PngOptions
+//   webp?: WebpOptions
+//   avif?: AvifOptions
+//   tiff?: TiffOptions
+//   gif?: GifOptions
+// }
+// }
 
 export default defineConfig({
   plugins: [
-    ImageTools({
+    VitePluginImageTools({
       quality: 80,
       enableWebp: true
     })
@@ -50,8 +68,9 @@ export default defineConfig({
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | quality | number | 80 | 图片质量 (1-100) |
-| include | string[] | ['png', 'jpg'] | 包含的图片格式：png/jpg/webp等 |
+| include | string[] | ['png', 'jpg', 'webp', 'avif', 'tiff', 'gif'] | 包含的图片格式：png/jpg/webp等 |
 | enableWebp | boolean | false | 生产环境是否转webp |
 | enableDev | boolean | false | 开发环境是否开启压缩 |
 | enableDevWebp | boolean | false | 开发环境是否开启转webp |
 | cacheDir | string | ‘node_modules/.cache/vite-plugin-image’ | 缓存路径， 默认，只在开发环境生效 |
+| sharpConfig | Object | {} | [sharp配置](https://sharp.pixelplumbing.com/api-output/#_top) |
