@@ -10,6 +10,7 @@ import {
   getImgWebpMap
 } from './cache'
 import { ImgFormatType, SharpOptionsType } from './types'
+import { transformWebpExtInCss } from './transform'
 
 function checkJPGExt(type: string): ImgFormatType {
   const ext = type.includes('.') ? type.replace('.', '') : type
@@ -79,13 +80,19 @@ export async function handleImgBundle(bundle: any) {
   for (const key in bundle) {
     const chunk = bundle[key] as any
     const { ext } = parse(key)
-    const { enableWebp, sharpConfig, filter } = getGlobalConfig()
+    const { enableWebp, sharpConfig, filter, isAllExtWebp } = getGlobalConfig()
 
     if (/(js|css|html)$/.test(key) && enableWebp) {
-      if (/(js)$/.test(key)) {
-        chunk.code = handleReplaceWebp(chunk.code)
-      } else if (/(css|html)$/.test(key)) {
-        chunk.source = handleReplaceWebp(chunk.source)
+      if (!isAllExtWebp) {
+        if (/(css)$/.test(key)) {
+          chunk.source = await transformWebpExtInCss(chunk.source)
+        }
+      } else {
+        if (/(js)$/.test(key)) {
+          chunk.code = handleReplaceWebp(chunk.code)
+        } else if (/(css|html)$/.test(key)) {
+          chunk.source = handleReplaceWebp(chunk.source)
+        }
       }
     }
 

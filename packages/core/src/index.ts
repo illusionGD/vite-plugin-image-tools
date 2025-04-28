@@ -18,7 +18,14 @@ export default function ImageTools(
 ): PluginOption {
   setGlobalConfig(options)
 
-  const { enableDevWebp, cacheDir, enableDev, filter } = getGlobalConfig()
+  const {
+    enableDevWebp,
+    cacheDir,
+    enableDev,
+    filter,
+    compatibility,
+    bodyWebpClassName
+  } = getGlobalConfig()
 
   let isBuild = false
   const cachePath = path.resolve(process.cwd(), cacheDir)
@@ -69,6 +76,42 @@ export default function ImageTools(
           return next()
         }
       })
+    },
+    transformIndexHtml(html) {
+      if (!compatibility) {
+        return {
+          html,
+          tags: []
+        }
+      }
+      return {
+        html,
+        tags: [
+          {
+            tag: 'script',
+            attrs: { type: 'module' },
+            children: `
+              var supportsWebp = async function () {
+                return new Promise((resole, reject) => {
+                  var img = new Image()
+                  img.onload = function () {
+                    var result = img.width > 0 && img.height > 0
+                    resole(result)
+                  }
+                  img.onerror = function () {
+                    reject(false);
+                  };
+                  img.src = 'data:image/webp;base64,UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA=';
+                })
+              }
+              var isSupport = await supportsWebp()
+              document.addEventListener('DOMContentLoaded', () => {
+                isSupport && document.querySelector('body').classList.add('${bodyWebpClassName}')
+              })
+            `
+          }
+        ]
+      }
     },
     async generateBundle(_options, bundle) {
       if (!isBuild) return

@@ -18,9 +18,10 @@ export default defineConfig({
     vue(),
     ImageTools({
       quality: 80,
-      //   enableWebp: true,
+      enableWebp: true,
       enableDev: true,
       //   enableDevWebp: true,
+      // bodyWebpClassName: 'webp-1',
       sharpConfig: {
         // jpg: {
         //   quality: 10
