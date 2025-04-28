@@ -12,6 +12,7 @@ import {
   handleReplaceWebp,
   setGlobalConfig
 } from './cache'
+import { transformWebpExtInHtml } from './transform'
 
 export default function ImageTools(
   options: Partial<PluginOptions> = {}
@@ -77,13 +78,14 @@ export default function ImageTools(
         }
       })
     },
-    transformIndexHtml(html) {
+    async transformIndexHtml(html) {
       if (!compatibility) {
         return {
           html,
           tags: []
         }
       }
+      const { bodyWebpClassName } = getGlobalConfig()
       return {
         html,
         tags: [
@@ -91,23 +93,44 @@ export default function ImageTools(
             tag: 'script',
             attrs: { type: 'module' },
             children: `
-              var supportsWebp = async function () {
-                return new Promise((resole, reject) => {
-                  var img = new Image()
-                  img.onload = function () {
-                    var result = img.width > 0 && img.height > 0
-                    resole(result)
+              ;(async () => {
+                const supportsWebp = () =>
+                  new Promise((resolve) => {
+                    const img = new Image()
+                    img.onload = () => resolve(img.width > 0 && img.height > 0)
+                    img.onerror = () => resolve(false)
+                    img.src =
+                      'data:image/webp;base64,UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA='
+                  })
+
+                try {
+                  const isSupport = await Promise.race([
+                    supportsWebp(),
+                    new Promise((resolve) => setTimeout(() => resolve(false), 300))
+                  ])
+
+                  if (isSupport) {
+                    document.querySelector('body').classList.add('${bodyWebpClassName}')
+                    document.querySelectorAll('[${bodyWebpClassName}]').forEach((domEl) => {
+                      var url = domEl.getAttribute('${bodyWebpClassName}')
+                      if (domEl.tagName.toLocaleLowerCase() === 'img') {
+                        domEl.setAttribute('src', url)
+                      } else if (domEl.tagName.toLocaleLowerCase() === 'source') {
+                        if (domEl.getAttribute('src')) {
+                          domEl.setAttribute('src', url)
+                        }
+                        if (domEl.getAttribute('srcset')) {
+                          domEl.setAttribute('srcset', url)
+                        }
+                      } else {
+                        domEl.setAttribute('style', url)
+                      }
+                    })
                   }
-                  img.onerror = function () {
-                    reject(false);
-                  };
-                  img.src = 'data:image/webp;base64,UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA=';
-                })
-              }
-              var isSupport = await supportsWebp()
-              document.addEventListener('DOMContentLoaded', () => {
-                isSupport && document.querySelector('body').classList.add('${bodyWebpClassName}')
-              })
+                } catch (error) {
+                  console.error('WebP error:', error)
+                }
+              })()
             `
           }
         ]
@@ -129,7 +152,7 @@ export default function ImageTools(
         const chunk = bundle[key] as any
 
         if (/(html)$/.test(key)) {
-          const htmlCode = handleReplaceWebp(chunk.source)
+          const htmlCode = await transformWebpExtInHtml(chunk.source)
           writeFileSync(join(opt.dir!, chunk.fileName), htmlCode)
         }
       }

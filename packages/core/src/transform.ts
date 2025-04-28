@@ -1,4 +1,5 @@
 import postcss from 'postcss'
+import { parse as parseHtml } from 'node-html-parser'
 import { replaceWebpExt } from './utils'
 import { getGlobalConfig } from './cache'
 interface BackgroundImageSelector {
@@ -50,4 +51,42 @@ export async function transformWebpExtInCss(css: string) {
   }, '')
 
   return css + webpCss
+}
+
+export async function transformWebpExtInHtml(html: string) {
+  const { bodyWebpClassName } = getGlobalConfig()
+  const doc = parseHtml(html)
+  const setWebpAttr = (dom: any, url: string | undefined) => {
+    if (url) {
+      dom.setAttribute(bodyWebpClassName, replaceWebpExt(url))
+    }
+  }
+
+  doc.querySelectorAll('img[src]').forEach((img) => {
+    setWebpAttr(img, img.getAttribute('src'))
+  })
+
+  doc.querySelectorAll('source[src], source[srcset]').forEach((source) => {
+    if (source.hasAttribute('src')) {
+      setWebpAttr(source, source.getAttribute('src'))
+    }
+    if (source.hasAttribute('srcset')) {
+      setWebpAttr(source, source.getAttribute('srcset'))
+    }
+  })
+
+  doc.querySelectorAll('[style]').forEach((element) => {
+    const style = element.getAttribute('style')
+    if (!style) {
+      return
+    }
+    const match = style.match(/background(?:-image)?:\s*url\((['"]?)(.*?)\1\)/)
+    if (match && match[2]) {
+      element.setAttribute(
+        bodyWebpClassName,
+        style.replace(match[2], replaceWebpExt(match[2]))
+      )
+    }
+  })
+  return doc.toString()
 }
