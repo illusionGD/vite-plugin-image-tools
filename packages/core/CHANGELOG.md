@@ -1,5 +1,12 @@
 # vite-plugin-image-tools
 
+## 1.2.0
+
+### Minor Changes
+
+- - 新增filter自定义过滤图片函数
+  - 新增compatibility兼容低版本浏览器，开启兼容的话，目前只支持处理css的webp转换
+
 ## 1.1.3
 
 ### Patch Changes

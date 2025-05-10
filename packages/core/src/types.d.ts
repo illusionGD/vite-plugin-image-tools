@@ -33,6 +33,9 @@ export type PluginOptions = {
   include: string[]
   cacheDir: string
   sharpConfig: sharpConfigType
+  compatibility: boolean
+  bodyWebpClassName: string
+  filter?: (path: string) => boolean
 }
 
 export type ImgFormatType = keyof sharpConfigType

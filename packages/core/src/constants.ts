@@ -25,5 +25,8 @@ export const DEFAULT_CONFIG: PluginOptions = {
   enableWebp: false,
   include: imgFormats,
   cacheDir: 'node_modules/.cache/vite-plugin-image',
-  sharpConfig: {}
+  sharpConfig: {},
+  compatibility: true,
+  bodyWebpClassName: 'webp',
+  filter: () => true
 }

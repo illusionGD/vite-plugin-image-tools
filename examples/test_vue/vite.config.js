@@ -5,6 +5,7 @@ import { resolve } from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: './',
   build: {
     rollupOptions: {
       input: {
@@ -21,14 +22,18 @@ export default defineConfig({
       enableWebp: true,
       enableDev: true,
       enableDevWebp: true,
-    //   include: ['png'],
+      compatibility: true,
+      // bodyWebpClassName: 'webp-1',
       sharpConfig: {
-        jpg: {
-          quality: 10
-        },
-        png: {
-          quality: 70
-        }
+        // jpg: {
+        //   quality: 10
+        // },
+        // png: {
+        //   quality: 70
+        // }
+      },
+      filter: (path) => {
+        return true
       }
     })
   ]

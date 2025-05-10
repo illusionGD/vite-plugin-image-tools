@@ -5,12 +5,14 @@ import img from './assets/import.jpg'
 <template>
   <div>
     <!-- <img src="./assets/image.png" alt=""> -->
-    <div class="test-css-img"></div>
-    <img :src="img">
+    <div class="test-css-img">
+      <div class="img-test"></div>
+    </div>
+    <img :src="img" />
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="scss">
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -24,8 +26,10 @@ import img from './assets/import.jpg'
   filter: drop-shadow(0 0 2em #42b883aa);
 }
 .test-css-img {
+  .img-test {
     background-image: url('./assets/css.jpg');
     width: 1146px;
     height: 717px;
+  }
 }
 </style>
