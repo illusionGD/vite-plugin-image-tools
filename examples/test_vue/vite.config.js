@@ -21,7 +21,8 @@ export default defineConfig({
       quality: 80,
       enableWebp: true,
       enableDev: true,
-      //   enableDevWebp: true,
+      enableDevWebp: true,
+      compatibility: true,
       // bodyWebpClassName: 'webp-1',
       sharpConfig: {
         // jpg: {
@@ -30,11 +31,10 @@ export default defineConfig({
         // png: {
         //   quality: 70
         // }
+      },
+      filter: (path) => {
+        return true
       }
-      //   filter: (path) => {
-      //     console.log('🚀 ~ path:', path)
-      //     return path.includes('.png')
-      //   }
     })
   ]
 })

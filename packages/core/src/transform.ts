@@ -1,7 +1,6 @@
 import postcss from 'postcss'
 import { parse as parseHtml } from 'node-html-parser'
-import { replaceWebpExt } from './utils'
-import { getGlobalConfig } from './cache'
+import { replaceWebpExt, getGlobalConfig } from './utils'
 interface BackgroundImageSelector {
   selector: string
   imageUrl: string
@@ -46,7 +45,8 @@ export async function transformWebpExtInCss(css: string) {
   const webpCss = selectors.reduce((prev, { selector, imageUrl }) => {
     return (
       prev +
-      `.${bodyWebpClassName} ${selector}{background-image: url(${replaceWebpExt(imageUrl)})}`
+      `body.no-${bodyWebpClassName} ${selector}{background-image: url(${imageUrl})}` +
+      `body.${bodyWebpClassName} ${selector}{background-image: url(${replaceWebpExt(imageUrl)})}`
     )
   }, '')
 

@@ -34,7 +34,6 @@ export type PluginOptions = {
   cacheDir: string
   sharpConfig: sharpConfigType
   compatibility: boolean
-  isAllExtWebp: boolean
   bodyWebpClassName: string
   filter?: (path: string) => boolean
 }

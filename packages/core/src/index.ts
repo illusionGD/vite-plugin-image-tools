@@ -3,15 +3,15 @@ import type { PluginOption, ResolvedConfig } from 'vite'
 import { existsSync, mkdirSync, writeFileSync } from 'fs'
 import path, { join, parse } from 'path'
 import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from './constants'
-import { processImage, handleImgBundle } from './press'
-import { filterImage } from './utils'
-import type { PluginOptions } from './types'
+import { processImage, handleImgBundle } from './compress'
 import {
-  getGlobalConfig,
+  filterImage,
+  handleFilterPath,
+  setGlobalConfig,
   handleImgMap,
-  handleReplaceWebp,
-  setGlobalConfig
-} from './cache'
+  getGlobalConfig
+} from './utils'
+import type { PluginOptions } from './types'
 import { transformWebpExtInHtml } from './transform'
 
 export default function ImageTools(
@@ -19,14 +19,8 @@ export default function ImageTools(
 ): PluginOption {
   setGlobalConfig(options)
 
-  const {
-    enableDevWebp,
-    cacheDir,
-    enableDev,
-    filter,
-    compatibility,
-    bodyWebpClassName
-  } = getGlobalConfig()
+  const { enableDevWebp, cacheDir, enableDev, compatibility, enableWebp } =
+    getGlobalConfig()
 
   let isBuild = false
   const cachePath = path.resolve(process.cwd(), cacheDir)
@@ -53,11 +47,9 @@ export default function ImageTools(
             path.resolve(process.cwd(), url.split('?')[0].slice(1) || '')
           )
 
-          if (filter && filter instanceof Function) {
-            const isTrue = filter(url)
-            if (!isTrue) {
-              return next()
-            }
+          const isTrue = await handleFilterPath(url)
+          if (!isTrue) {
+            return next()
           }
 
           const { ext } = parse(filePath)
@@ -79,7 +71,11 @@ export default function ImageTools(
       })
     },
     async transformIndexHtml(html) {
-      if (!compatibility) {
+      if (
+        !compatibility ||
+        (isBuild && !enableWebp) ||
+        (!isBuild && enableDevWebp)
+      ) {
         return {
           html,
           tags: []
@@ -91,46 +87,20 @@ export default function ImageTools(
         tags: [
           {
             tag: 'script',
-            attrs: { type: 'module' },
             children: `
-              ;(async () => {
-                const supportsWebp = () =>
-                  new Promise((resolve) => {
-                    const img = new Image()
-                    img.onload = () => resolve(img.width > 0 && img.height > 0)
-                    img.onerror = () => resolve(false)
-                    img.src =
-                      'data:image/webp;base64,UklGRh4AAABXRUJQVlA4TBEAAAAvAAAAAAfQ//73v/+BiOh/AAA='
-                  })
-
-                try {
-                  const isSupport = await Promise.race([
-                    supportsWebp(),
-                    new Promise((resolve) => setTimeout(() => resolve(false), 300))
-                  ])
-
-                  if (isSupport) {
-                    document.querySelector('body').classList.add('${bodyWebpClassName}')
-                    document.querySelectorAll('[${bodyWebpClassName}]').forEach((domEl) => {
-                      var url = domEl.getAttribute('${bodyWebpClassName}')
-                      if (domEl.tagName.toLocaleLowerCase() === 'img') {
-                        domEl.setAttribute('src', url)
-                      } else if (domEl.tagName.toLocaleLowerCase() === 'source') {
-                        if (domEl.getAttribute('src')) {
-                          domEl.setAttribute('src', url)
-                        }
-                        if (domEl.getAttribute('srcset')) {
-                          domEl.setAttribute('srcset', url)
-                        }
-                      } else {
-                        domEl.setAttribute('style', url)
-                      }
-                    })
-                  }
-                } catch (error) {
-                  console.error('WebP error:', error)
-                }
-              })()
+            ;(function () {
+              var img = document.createElement('img')
+              img.src =
+                'data:image/webp;base64,UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEacQERGIiP4HAA=='
+              img.onerror = img.onload = function () {
+                var isSupport = img.width > 0 && img.height > 0
+                document.documentElement
+                  .querySelector('body')
+                  .classList.add(
+                    isSupport ? '${bodyWebpClassName}' : 'no-${bodyWebpClassName}'
+                  )
+              }
+            })()
             `
           }
         ]
@@ -139,7 +109,7 @@ export default function ImageTools(
     async generateBundle(_options, bundle) {
       if (!isBuild) return
 
-      handleImgMap(bundle)
+      await handleImgMap(bundle)
 
       await handleImgBundle(bundle)
     },

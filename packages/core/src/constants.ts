@@ -27,7 +27,6 @@ export const DEFAULT_CONFIG: PluginOptions = {
   cacheDir: 'node_modules/.cache/vite-plugin-image',
   sharpConfig: {},
   compatibility: true,
-  isAllExtWebp: false,
-  bodyWebpClassName: 'v-p-m-t-webp',
+  bodyWebpClassName: 'webp',
   filter: () => true
 }
