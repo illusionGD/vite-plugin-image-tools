@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 1.2.1
+
+### Patch Changes
+
+- 一些小优化
+
 ## 1.2.0
 
 ### Minor Changes
