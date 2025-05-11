@@ -9,7 +9,8 @@ import {
   handleFilterPath,
   setGlobalConfig,
   handleImgMap,
-  getGlobalConfig
+  getGlobalConfig,
+  handleReplaceWebp
 } from './utils'
 import type { PluginOptions } from './types'
 import { transformWebpExtInHtml } from './transform'
@@ -114,7 +115,7 @@ export default function ImageTools(
       await handleImgBundle(bundle)
     },
     async writeBundle(opt, bundle) {
-      const { enableWebp } = getGlobalConfig()
+      const { enableWebp, compatibility } = getGlobalConfig()
       if (!enableWebp) {
         return
       }
@@ -122,7 +123,9 @@ export default function ImageTools(
         const chunk = bundle[key] as any
 
         if (/(html)$/.test(key)) {
-          const htmlCode = await transformWebpExtInHtml(chunk.source)
+          const htmlCode = compatibility
+            ? await transformWebpExtInHtml(chunk.source)
+            : await handleReplaceWebp(chunk.source)
           writeFileSync(join(opt.dir!, chunk.fileName), htmlCode)
         }
       }

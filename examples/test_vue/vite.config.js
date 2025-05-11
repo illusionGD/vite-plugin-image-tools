@@ -22,7 +22,7 @@ export default defineConfig({
       enableWebp: true,
       enableDev: true,
       enableDevWebp: true,
-      compatibility: true,
+      // compatibility: true,
       // bodyWebpClassName: 'webp-1',
       sharpConfig: {
         // jpg: {

@@ -4,6 +4,13 @@ import img from './assets/import.jpg'
 
 <template>
   <div>
+    <a
+      target="_blank"
+      class="twitter-share-button"
+      href="https://twitter.com/intent/tweet?text=Hello%20world&url=https://mc-carnival.kurogames-global.com/"
+    >
+      Tweet</a
+    >
     <!-- <img src="./assets/image.png" alt=""> -->
     <div class="test-css-img">
       <div class="img-test"></div>
