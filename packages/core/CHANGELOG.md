@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 1.2.2
+
+### Patch Changes
+
+- types file
+
 ## 1.2.1
 
 ### Patch Changes
