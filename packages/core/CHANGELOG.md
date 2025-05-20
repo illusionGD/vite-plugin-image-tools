@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 1.2.3
+
+### Patch Changes
+
+- filter base64 image
+
 ## 1.2.2
 
 ### Patch Changes

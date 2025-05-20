@@ -68,10 +68,18 @@ export function filterImage(filePath: string) {
   if (!IMG_FORMATS_ENUM[format]) {
     return false
   }
+  
+  if (isBase64(filePath)) {
+    return false
+  }
+
   return include.includes(format)
 }
 
 export function replaceWebpExt(url: string) {
+  if (isBase64(url)) {
+    return url
+  }
   const [path, query] = url.split('?')
   const ext = extname(path)
 
@@ -93,4 +101,8 @@ export async function handleFilterPath(path: string) {
 
 export function isAsyncFunction(fn: Function) {
   return Object.prototype.toString.call(fn) === '[object AsyncFunction]'
+}
+
+export function isBase64(url: string) {
+  return url.startsWith('data:image/') && url.includes(';base64,')
 }
