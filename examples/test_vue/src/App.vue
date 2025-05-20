@@ -4,6 +4,7 @@ import img from './assets/import.jpg'
 
 <template>
   <div>
+    <div class="base64-img"></div>
     <a
       target="_blank"
       class="twitter-share-button"
@@ -20,6 +21,11 @@ import img from './assets/import.jpg'
 </template>
 
 <style scoped lang="scss">
+.base64-img {
+  width: 40px;
+  height: 40px;
+  background-image: url('./assets/base64.png');
+}
 .logo {
   height: 6em;
   padding: 1.5em;
