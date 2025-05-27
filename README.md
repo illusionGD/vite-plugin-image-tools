@@ -72,7 +72,7 @@ export default defineConfig({
 | quality | number | 80 | 图片质量 (1-100) |
 | include | string[] | ['png', 'jpg', 'webp', 'avif', 'tiff', 'gif'] | 包含的图片格式：png/jpg/webp等 |
 | filter | function<string> | () => true | 过滤方法，可自定义过滤图片逻辑，支持async<br/>参数：图片路径<br/>例子：<br/>filter: (path) => {  return path.includes('.png') } |
-| compatibility | boolean | true | 是否兼容低版本浏览器，生产环境生效，默认-true，<br/>true：只有css中的图片会转webp（暂时只支持打包时候处理css）<br/> false：全部转webp |
+| compatibility | boolean | false | 是否兼容低版本浏览器，生产环境生效，<br/>true：只有css中的图片会转webp（暂时只支持打包时候处理css）<br/> false：全部转webp |
 | bodyWebpClassName | string | webp | body标签的webp class，用于生成兼容webp的class |
 | enableWebp | boolean | false | 生产环境是否转webp |
 | enableDev | boolean | false | 开发环境是否开启压缩 |
