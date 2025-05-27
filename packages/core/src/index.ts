@@ -41,17 +41,17 @@ export default function ImageTools(
       }
       server.middlewares.use(async (req, res, next) => {
         const url = req.url || ''
-       
-        if (!filterImage(url)) return next()
+        const isFilter = await filterImage(url)
+        if (!isFilter) return next()
         try {
           const filePath = decodeURIComponent(
             path.resolve(process.cwd(), url.split('?')[0].slice(1) || '')
           )
       
-          const isTrue = await handleFilterPath(url)
-          if (!isTrue) {
-            return next()
-          }
+          // const isTrue = await handleFilterPath(url)
+          // if (!isTrue) {
+          //   return next()
+          // }
       
           const { ext } = parse(filePath)
           const type = enableDevWebp
@@ -63,7 +63,7 @@ export default function ImageTools(
           if (!buffer) {
             return next()
           }
-          
+
           res.setHeader('Content-Type', `image/${type}`)
           res.end(buffer)
         } catch (e) {

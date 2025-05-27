@@ -11,6 +11,7 @@ import type {
   OutputOptions
 } from 'sharp'
 import { type Config as svgoConfig } from 'svgo'
+import { IMG_FORMATS_ENUM } from './constants'
 
 export type AnyObject = {
   [key: string | number | symbol]: any
@@ -24,7 +25,6 @@ interface sharpConfigType {
   avif?: AvifOptions
   tiff?: TiffOptions
   gif?: GifOptions
-  svg?: svgoConfig
 }
 
 export type PluginOptions = {
@@ -32,14 +32,18 @@ export type PluginOptions = {
   enableDev: boolean
   enableDevWebp: boolean
   enableWebp: boolean
-  include: string[]
+  includes: string | RegExp
+  excludes: string | RegExp
   cacheDir: string
   sharpConfig: sharpConfigType
+  svgoConfig: svgoConfig
   compatibility: boolean
   bodyWebpClassName: string
   filter?: (path: string) => boolean
 }
 
-export type ImgFormatType = keyof sharpConfigType
+export type ImgFormatType = keyof typeof IMG_FORMATS_ENUM
+
+export type SharpImgFormatType = Exclude<ImgFormatType, 'svg'>
 
 export type SharpOptionsType = sharpConfigType[keyof sharpConfigType]

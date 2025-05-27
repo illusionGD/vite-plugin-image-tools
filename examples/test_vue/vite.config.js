@@ -7,7 +7,6 @@ import { resolve } from 'path'
 export default defineConfig({
   base: './',
   build: {
-    assetsInlineLimit:0,
     rollupOptions: {
       input: {
         index: resolve(__dirname, 'index.html'),
@@ -23,8 +22,9 @@ export default defineConfig({
       enableWebp: true,
       enableDev: true,
       enableDevWebp: true,
-      compatibility: true,
+      compatibility: false,
       bodyWebpClassName: 'webp-1',
+      excludes: '',
       sharpConfig: {
         // jpg: {
         //   quality: 10
@@ -33,12 +33,15 @@ export default defineConfig({
         //   quality: 70
         // }
       },
-      filter: (path) => {
-        // if (path.includes('svg')) {
-          
-        //   console.log("🚀 ~ path:", path)
-        // }
-        return !path.includes('svg')
+      filter: async (path) => {
+        // console.log("🚀 ~ path:", path)
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            resolve(true)
+          }, 100)
+        })
+
+        // return path.includes('.svg')
       }
     })
   ]
