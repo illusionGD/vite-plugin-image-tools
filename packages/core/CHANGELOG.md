@@ -1,10 +1,16 @@
 # vite-plugin-image-tools
 
+## 2.0.1
+
+### Patch Changes
+
+- fix: fliter image
+
 ## 2.0.0
 
 ### Major Changes
 
- - add svgo compress svg images
+- add svgo compress svg images
 
 - fix: The "path" argument must be of type string. Received undefined
 - remove include feild
@@ -82,4 +88,3 @@
 ### Patch Changes
 
 - notes
-

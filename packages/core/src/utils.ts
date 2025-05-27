@@ -27,12 +27,13 @@ export function getImgWebpMap() {
 export async function handleImgMap(bundle: any) {
   for (const key in bundle) {
     const chunk = bundle[key] as any
-    const isTrue = filterChunkImage(chunk)
+    const isTrue = await filterChunkImage(chunk)
     if (!isTrue) {
       continue
     }
 
     const { fileName } = chunk
+    console.log("🚀 ~ fileName:", fileName)
     const { base } = parse(fileName)
     addImgWebpMap(base)
   }
@@ -40,14 +41,12 @@ export async function handleImgMap(bundle: any) {
 
 export async function filterChunkImage(chunk: any) {
   if (!chunk.originalFileNames || !chunk.originalFileNames.length) {
-    return chunk.fileName ? false : await !filterImage(chunk.fileName)
+    return chunk.fileName ? false : await filterImage(chunk.fileName)
   } else {
     for (let index = 0; index < chunk.originalFileNames.length; index++) {
       const path = chunk.originalFileNames[index];
       const isTrue = await filterImage(path)
-      if (isTrue) {
-        return true
-      }
+      return isTrue
     }
   }
 }
