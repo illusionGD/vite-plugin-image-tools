@@ -6,12 +6,14 @@ import {
   handleReplaceWebp,
   getCacheKey,
   getGlobalConfig,
-  replaceWebpExt
+  replaceWebpExt,
+  filterChunkImage
 } from './utils'
 import sharp, { type FormatEnum } from 'sharp'
 import { existsSync, readdirSync, readFileSync, statSync, writeFile } from 'fs'
-import { ImgFormatType, SharpOptionsType } from './types'
+import { ImgFormatType, SharpImgFormatType, SharpOptionsType } from './types'
 import { transformWebpExtInCss } from './transform'
+import { optimize } from 'svgo'
 
 function checkJPGExt(type: string): ImgFormatType {
   const ext = type.includes('.') ? type.replace('.', '') : type
@@ -66,7 +68,7 @@ export async function processImage(filePath: string) {
 
   const buffer = readFileSync(filePath)
 
-  const newBuffer = await pressBufferToImage(buffer, type, sharpConfig[type])
+  const newBuffer = await pressBufferToImage(buffer, type, sharpConfig[type as SharpImgFormatType])
 
   if (!newBuffer) {
     return
@@ -96,24 +98,22 @@ export async function handleImgBundle(bundle: any) {
         }
       }
     }
-
-    if (!filterImage(key)) {
-      continue
-    }
-
-    const isTrue = await handleFilterPath(chunk.originalFileNames[0])
-
+    const isTrue = await filterChunkImage(chunk)
     if (!isTrue) {
       continue
     }
 
+    // const isTrue = await handleFilterPath(chunk.originalFileNames[0])
+
+    // if (!isTrue) {
+    //   continue
+    // }
+    const format = ext.replace('.', '') as ImgFormatType
+    const isSvg = format === IMG_FORMATS_ENUM.svg
     if (chunk.source && chunk.source instanceof Buffer) {
-      const format = ext.replace('.', '') as ImgFormatType
-      const pressBuffer = await pressBufferToImage(
-        chunk.source,
-        format,
-        sharpConfig[format]
-      )
+      const pressBuffer = isSvg
+        ? await compressSvg(chunk.source)
+        : await pressBufferToImage(chunk.source, format, sharpConfig[format])
       chunk.source = pressBuffer
     }
 
@@ -129,5 +129,20 @@ export async function handleImgBundle(bundle: any) {
       webpChunk.fileName = webpName
       bundle[webpName] = webpChunk
     }
+  }
+}
+
+export async function compressSvg(svg: string) {
+  const { svgoConfig } = getGlobalConfig()
+  try {
+    const result = optimize(
+      svg,
+      svgoConfig
+    )
+
+    return Buffer.from(result.data)
+  } catch (error) {
+    console.error('svg compress failed:', error)
+    throw error
   }
 }

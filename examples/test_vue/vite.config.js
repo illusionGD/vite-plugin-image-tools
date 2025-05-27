@@ -22,8 +22,9 @@ export default defineConfig({
       enableWebp: true,
       enableDev: true,
       enableDevWebp: true,
-      compatibility: true,
-      // bodyWebpClassName: 'webp-1',
+      compatibility: false,
+      bodyWebpClassName: 'webp-1',
+      excludes: '',
       sharpConfig: {
         // jpg: {
         //   quality: 10
@@ -32,8 +33,15 @@ export default defineConfig({
         //   quality: 70
         // }
       },
-      filter: (path) => {
-        return true
+      filter: async (path) => {
+        // console.log("🚀 ~ path:", path)
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            resolve(true)
+          }, 100)
+        })
+
+        // return path.includes('.svg')
       }
     })
   ]

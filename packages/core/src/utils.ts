@@ -2,7 +2,7 @@ import { extname, join, parse } from 'path'
 import { IMG_FORMATS_ENUM } from './constants'
 import { cwd } from 'process'
 import crypto from 'crypto'
-import { AnyObject, PluginOptions } from './types'
+import { AnyObject, ImgFormatType, PluginOptions } from './types'
 import { DEFAULT_CONFIG } from './constants'
 
 const imgWebpMap: { [key: string]: string } = {}
@@ -27,12 +27,7 @@ export function getImgWebpMap() {
 export async function handleImgMap(bundle: any) {
   for (const key in bundle) {
     const chunk = bundle[key] as any
-
-    if (!filterImage(key)) {
-      continue
-    }
-
-    const isTrue = await handleFilterPath(chunk.originalFileNames[0])
+    const isTrue = filterChunkImage(chunk)
     if (!isTrue) {
       continue
     }
@@ -40,6 +35,20 @@ export async function handleImgMap(bundle: any) {
     const { fileName } = chunk
     const { base } = parse(fileName)
     addImgWebpMap(base)
+  }
+}
+
+export async function filterChunkImage(chunk: any) {
+  if (!chunk.originalFileNames || !chunk.originalFileNames.length) {
+    return chunk.fileName ? false : await !filterImage(chunk.fileName)
+  } else {
+    for (let index = 0; index < chunk.originalFileNames.length; index++) {
+      const path = chunk.originalFileNames[index];
+      const isTrue = await filterImage(path)
+      if (isTrue) {
+        return true
+      }
+    }
   }
 }
 
@@ -61,19 +70,46 @@ export function getCacheKey({ name, type, content }: any, factor: AnyObject) {
   return `${name}_${hash.slice(0, 8)}.${type}`
 }
 
-export function filterImage(filePath: string) {
+export async function filterImage(filePath: string) {
+  if (!filePath) {
+    return false
+  }
   const { ext } = parse(filePath)
-  const { include } = getGlobalConfig()
-  const format = ext.replace('.', '')
+  const { includes, excludes } = getGlobalConfig()
+  const format = ext.replace('.', '') as ImgFormatType
   if (!IMG_FORMATS_ENUM[format]) {
     return false
   }
-  
+
   if (isBase64(filePath)) {
     return false
   }
 
-  return include.includes(format)
+  // excludes
+  if (excludes) {
+    if (typeof excludes === 'string') {
+      if (filePath.includes(excludes)) {
+        return false
+      }
+    } else if (excludes.test(filePath)) {
+      return false
+    }
+  }
+
+  // includes
+  if (includes) {
+    if (typeof includes === 'string') {
+      if (!filePath.includes(includes)) {
+        return false
+      }
+    } else {
+      if (!includes.test(filePath)) {
+        return false
+      }
+    }
+  }
+
+  return await handleFilterPath(filePath)
 }
 
 export function replaceWebpExt(url: string) {

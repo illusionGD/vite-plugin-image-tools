@@ -1,5 +1,15 @@
 # vite-plugin-image-tools
 
+## 2.0.0
+
+### Major Changes
+
+ - add svgo compress svg images
+
+- fix: The "path" argument must be of type string. Received undefined
+- remove include feild
+- add 'includes' and 'excludes' feilds
+
 ## 1.2.3
 
 ### Patch Changes
@@ -72,3 +82,4 @@
 ### Patch Changes
 
 - notes
+

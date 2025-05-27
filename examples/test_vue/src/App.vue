@@ -5,6 +5,7 @@ import img from './assets/import.jpg'
 <template>
   <div>
     <div class="base64-img"></div>
+    <div class="svg-icon"></div>
     <a
       target="_blank"
       class="twitter-share-button"
@@ -44,5 +45,10 @@ import img from './assets/import.jpg'
     width: 1146px;
     height: 717px;
   }
+}
+.svg-icon {
+  width: 200px;
+  aspect-ratio: 1;
+  background-image: url('./assets/large-image.svg');
 }
 </style>
