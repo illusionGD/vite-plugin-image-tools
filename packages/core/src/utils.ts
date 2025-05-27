@@ -33,7 +33,6 @@ export async function handleImgMap(bundle: any) {
     }
 
     const { fileName } = chunk
-    console.log("🚀 ~ fileName:", fileName)
     const { base } = parse(fileName)
     addImgWebpMap(base)
   }
