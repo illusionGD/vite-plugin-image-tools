@@ -68,7 +68,7 @@ export default defineConfig({
 | quality | number | 80 | picture quality (1-100) |
 | include | string[] | ['png', 'jpg', 'webp', 'avif', 'tiff', 'gif'] | The image formats are: png/jpg/webp..., etc. |
 | filter | function<string> | () => true | Filtering method, customizable image filtering logic, supported async<br/>Parameter: Image path<br/>example：<br/>filter: (path) => {  return path.includes('.png') } |
-| compatibility | boolean | true | Whether it is compatible with low-version browsers, it takes effect in the production environment, by default-true，<br/>true：Only images in css will be converted to webp (currently only css processing is supported during packaging). <br/>false：all replace webp |
+| compatibility | boolean | false | Whether it is compatible with low-version browsers, it takes effect in the production environment, <br/>true：Only images in css will be converted to webp (currently only css processing is supported during packaging). <br/>false：all replace webp |
 | bodyWebpClassName | string | webp | The webp class of the body tag is used to generate classes compatible with webp |
 | enableWebp | boolean | false | Whether to switch to webp in the production environment |
 | enableDev | boolean | false | Whether to enable compression in the development environment |
