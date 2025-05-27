@@ -7,6 +7,7 @@ import { resolve } from 'path'
 export default defineConfig({
   base: './',
   build: {
+    assetsInlineLimit:0,
     rollupOptions: {
       input: {
         index: resolve(__dirname, 'index.html'),
@@ -23,7 +24,7 @@ export default defineConfig({
       enableDev: true,
       enableDevWebp: true,
       compatibility: true,
-      // bodyWebpClassName: 'webp-1',
+      bodyWebpClassName: 'webp-1',
       sharpConfig: {
         // jpg: {
         //   quality: 10
@@ -33,7 +34,11 @@ export default defineConfig({
         // }
       },
       filter: (path) => {
-        return true
+        // if (path.includes('svg')) {
+          
+        //   console.log("🚀 ~ path:", path)
+        // }
+        return !path.includes('svg')
       }
     })
   ]

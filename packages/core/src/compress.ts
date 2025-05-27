@@ -12,6 +12,7 @@ import sharp, { type FormatEnum } from 'sharp'
 import { existsSync, readdirSync, readFileSync, statSync, writeFile } from 'fs'
 import { ImgFormatType, SharpOptionsType } from './types'
 import { transformWebpExtInCss } from './transform'
+import { optimize } from 'svgo'
 
 function checkJPGExt(type: string): ImgFormatType {
   const ext = type.includes('.') ? type.replace('.', '') : type
@@ -106,28 +107,51 @@ export async function handleImgBundle(bundle: any) {
     if (!isTrue) {
       continue
     }
-
+    const format = ext.replace('.', '') as ImgFormatType
+    const isSvg = format === IMG_FORMATS_ENUM.svg
     if (chunk.source && chunk.source instanceof Buffer) {
-      const format = ext.replace('.', '') as ImgFormatType
-      const pressBuffer = await pressBufferToImage(
-        chunk.source,
-        format,
-        sharpConfig[format]
-      )
+      const pressBuffer = isSvg
+        ? await compressSvg(chunk.source)
+        : await pressBufferToImage(chunk.source, format, sharpConfig[format])
       chunk.source = pressBuffer
     }
 
     if (enableWebp) {
-      const webpBuffer = await pressBufferToImage(
-        chunk.source,
-        IMG_FORMATS_ENUM.webp,
-        sharpConfig[IMG_FORMATS_ENUM.webp]
-      )
+      const webpBuffer =await pressBufferToImage(
+            chunk.source,
+            IMG_FORMATS_ENUM.webp,
+            sharpConfig[IMG_FORMATS_ENUM.webp]
+          )
       const webpName = replaceWebpExt(key)
       const webpChunk = structuredClone(chunk)
       webpChunk.source = webpBuffer
       webpChunk.fileName = webpName
       bundle[webpName] = webpChunk
     }
+  }
+}
+
+export async function compressSvg(svg: string) {
+  const { sharpConfig } = getGlobalConfig()
+  try {
+    const result = optimize(
+      svg,
+      sharpConfig.svg || {
+        plugins: [
+          'preset-default',
+          { name: 'removeXMLNS' },
+          { name: 'removeViewBox' }
+        ],
+        js2svg: {
+          pretty: false,
+          indent: 0
+        }
+      }
+    )
+
+    return Buffer.from(result.data)
+  } catch (error) {
+    console.error('svg compress failed:', error)
+    throw error
   }
 }

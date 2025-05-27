@@ -8,7 +8,8 @@ export const IMG_FORMATS_ENUM: { [key: string]: ImgFormatType } = {
   webp: 'webp',
   avif: 'avif',
   tiff: 'tiff',
-  gif: 'gif'
+  gif: 'gif',
+  svg: 'svg'
 } as const
 
 const imgFormats: ImgFormatType[] = []

@@ -10,6 +10,7 @@ import type {
   GifOptions,
   OutputOptions
 } from 'sharp'
+import { type Config as svgoConfig } from 'svgo'
 
 export type AnyObject = {
   [key: string | number | symbol]: any
@@ -23,6 +24,7 @@ interface sharpConfigType {
   avif?: AvifOptions
   tiff?: TiffOptions
   gif?: GifOptions
+  svg?: svgoConfig
 }
 
 export type PluginOptions = {
