@@ -48,8 +48,6 @@ export default defineConfig({
 ```
 
 # 配置参数
-
-
 | 参数              | 类型             | 默认值                                                                                                                                   | Description                                                                                                                     |
 | ----------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | quality           | number           | 80                                                                                                                                       | 图片质量 (1-100)                                                                                                                |
@@ -64,3 +62,4 @@ export default defineConfig({
 | cacheDir          | string           | ‘node_modules/.cache/vite-plugin-image’                                                                                                | 缓存路径， 默认，只在开发环境生效                                                                                               |
 | sharpConfig       | Object           | { jpeg?: JpegOptions, jpg?: JpegOptions, png?: PngOptions, webp?: WebpOptions, avif?: AvifOptions, tiff?: TiffOptions, gif?: GifOptions} | [sharp配置](https://sharp.pixelplumbing.com/api-output/#_top)                                                                   |
 | svgoConfig        | Object           | {plugins:['preset-default',{name:'removerXMLNS'},{name:'removeViewBox'}],js2svg:{indent:2, pretty: true}}                                | [https://svgo.dev/docs/preset-default/]()                                                                                       |
+
