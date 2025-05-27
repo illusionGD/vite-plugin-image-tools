@@ -22,27 +22,27 @@ export default defineConfig({
       enableWebp: true,
       enableDev: true,
       enableDevWebp: true,
-      compatibility: false,
-      bodyWebpClassName: 'webp-1',
-      excludes: '',
-      sharpConfig: {
-        // jpg: {
-        //   quality: 10
-        // },
-        // png: {
-        //   quality: 70
-        // }
-      },
-      filter: async (path) => {
-        // console.log("🚀 ~ path:", path)
-        return new Promise((resolve, reject) => {
-          setTimeout(() => {
-            resolve(true)
-          }, 100)
-        })
+      // compatibility: false,
+      // bodyWebpClassName: 'webp-1',
+      // excludes: '',
+      // sharpConfig: {
+      //   // jpg: {
+      //   //   quality: 10
+      //   // },
+      //   // png: {
+      //   //   quality: 70
+      //   // }
+      // },
+      // filter: async (path) => {
+      //   // console.log("🚀 ~ path:", path)
+      //   return new Promise((resolve, reject) => {
+      //     setTimeout(() => {
+      //       resolve(true)
+      //     }, 100)
+      //   })
 
-        // return path.includes('.svg')
-      }
+      //   // return path.includes('.svg')
+      // }
     })
   ]
 })
