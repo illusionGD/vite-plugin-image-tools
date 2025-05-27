@@ -44,8 +44,6 @@ export default defineConfig({
 ```
 
 ## Options
-
-
 | Option            | Type          | Default                                                                                                                                  | Description                                                                                                                                                                                                                                 |
 | ----------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | quality           | number        | 80                                                                                                                                       | picture quality (1-100)                                                                                                                                                                                                                     |
@@ -60,3 +58,4 @@ export default defineConfig({
 | cacheDir          | string        | ‘node_modules/.cache/vite-plugin-image’                                                                                                | Cache path,this path is valid only in the development environment                                                                                                                                                                           |
 | sharpConfig       | Object        | { jpeg?: JpegOptions, jpg?: JpegOptions, png?: PngOptions, webp?: WebpOptions, avif?: AvifOptions, tiff?: TiffOptions, gif?: GifOptions} | [sharp config](https://sharp.pixelplumbing.com/api-output/#_top)                                                                                                                                                                            |
 | svgoConfig        | Object        | {plugins:['preset-default',{name:'removerXMLNS'},{name:'removeViewBox'}],js2svg:{indent:2, pretty: true}}                                | [https://svgo.dev/docs/preset-default/]()                                                                                                                                                                                                   |
+
