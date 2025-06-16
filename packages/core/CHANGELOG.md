@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 2.0.2
+
+### Patch Changes
+
+- bug: 开启兼容模式下，filter过滤的图片没生效
+
 ## 2.0.1
 
 ### Patch Changes

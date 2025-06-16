@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import ImageTools from 'vite-plugin-image-tools'
 import { resolve } from 'path'
-import vitePluginSprite from './sprites'
+import { readFileSync, statSync } from 'fs'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -29,7 +29,7 @@ export default defineConfig({
       // enableDevWebp: true,
       spriteConfig: {
         spriteDir: './src/assets/icons'
-      }
+      },
       // compatibility: false,
       // bodyWebpClassName: 'webp-1',
       // excludes: '',
@@ -41,16 +41,22 @@ export default defineConfig({
       //   //   quality: 70
       //   // }
       // },
-      // filter: async (path) => {
-      //   // console.log("🚀 ~ path:", path)
-      //   return new Promise((resolve, reject) => {
-      //     setTimeout(() => {
-      //       resolve(true)
-      //     }, 100)
-      //   })
+      filter: (path) => {
+        const file = readFileSync(path)
+        if (!file) {
+          return false
+        }
 
-      //   // return path.includes('.svg')
-      // }
+        const stats = statSync(path)
+        // 10kb以下不处理
+        if (stats.size <= 1024 * 1024 * 1) {
+            console.log("🚀 ~ 1024 * 1024 * 1:", 1024 * 1024 * 1)
+            console.log("🚀 ~ path:", path)
+        console.log("🚀 ~ stats.size:", stats.size)
+          return false
+        }
+        return true
+      }
     })
   ]
 })
