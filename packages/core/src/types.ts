@@ -40,8 +40,19 @@ export type PluginOptions = {
   compatibility: boolean
   bodyWebpClassName: string
   filter?: (path: string) => boolean
+  spriteConfig?: {
+    spriteDir?: string | string[]
+    includes?: string | RegExp
+    excludes?: string | RegExp
+    suffix?: string
+    algorithm?:
+      | 'top-down'
+      | 'left-right'
+      | 'diagonal'
+      | 'alt-diagonal'
+      | 'binary-tree'
+  }
 }
-
 export type ImgFormatType = keyof typeof IMG_FORMATS_ENUM
 
 export type SharpImgFormatType = Exclude<ImgFormatType, 'svg'>

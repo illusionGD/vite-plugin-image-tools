@@ -50,10 +50,13 @@
         "@rollup/plugin-terser": "^0.4.4",
         "@rollup/plugin-typescript": "^12.1.2",
         "@types/node": "^22.13.9",
+        "@types/spritesmith": "^3.4.5",
         "@vitejs/plugin-vue": "^5.2.1",
+        "@vue/compiler-sfc": "^3.5.16",
         "node-html-parser": "^7.0.1",
         "postcss": "^8.5.3",
-        "rimraf": "^6.0.1"
+        "rimraf": "^6.0.1",
+        "spritesmith": "^3.5.1"
     },
     "dependencies": {
         "sharp": "^0.33.5",

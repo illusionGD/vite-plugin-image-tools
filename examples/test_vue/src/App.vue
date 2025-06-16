@@ -4,6 +4,9 @@ import img from './assets/import.jpg'
 
 <template>
   <div>
+    <div>
+      <div class="icon-test"></div>
+    </div>
     <div class="base64-img"></div>
     <div class="svg-icon"></div>
     <a
@@ -50,5 +53,16 @@ import img from './assets/import.jpg'
   width: 200px;
   aspect-ratio: 1;
   background-image: url('./assets/large-image.svg');
+}
+
+.icon-test {
+  width: 56px;
+  height: 68px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-image: url('./assets/icons/1.png');
+  &:hover {
+    background-image: url('./assets/icons/2.png');
+  }
 }
 </style>

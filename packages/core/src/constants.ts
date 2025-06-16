@@ -24,12 +24,15 @@ export const DEFAULT_CONFIG: PluginOptions = {
   svgoConfig: {
     plugins: [
       'preset-default',
-      { name: 'removerXMLNS', fn: () => null},
+      { name: 'removerXMLNS', fn: () => null },
       { name: 'removeViewBox' }
     ],
     js2svg: { indent: 2, pretty: true }
   },
   compatibility: false,
   bodyWebpClassName: 'webp',
-  filter: () => true
+  filter: () => true,
+  spriteConfig: {
+    suffix: 'sprites'
+  }
 }

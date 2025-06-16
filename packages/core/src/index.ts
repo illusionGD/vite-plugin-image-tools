@@ -1,6 +1,6 @@
 // vite-plugin-image-compress.ts
 import type { PluginOption, ResolvedConfig } from 'vite'
-import { existsSync, mkdirSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import path, { join, parse } from 'path'
 import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from './constants'
 import { processImage, handleImgBundle } from './compress'
@@ -10,10 +10,12 @@ import {
   setGlobalConfig,
   handleImgMap,
   getGlobalConfig,
-  handleReplaceWebp
+  handleReplaceWebp,
+  isCssFile
 } from './utils'
 import type { PluginOptions } from './types'
 import { transformWebpExtInHtml } from './transform'
+import { handleSprites, handleVueSprite, initSprite } from './sprites'
 
 export default function ImageTools(
   options: Partial<PluginOptions> = {}
@@ -29,11 +31,33 @@ export default function ImageTools(
   if (!existsSync(cachePath)) {
     mkdirSync(cachePath, { recursive: true })
   }
+  
+  initSprite()
 
   return {
     name: 'vite-plugin-image-tools',
     config(config, { command }) {
       isBuild = command === 'build'
+    },
+    async load(id: string) {
+      // if (!id.includes('node_modules') && (id.endsWith('.vue') || isCssFile(id))) {
+      //   console.log("🚀 ~ id:", id)
+      //   const code = readFileSync(id).toString()
+      //   const newCode = await handleSprites(code,id)
+      //   if (newCode) {
+      //     return newCode
+      //   }
+      // }
+      // handleSprites(code,id)
+    },
+    async transform(code: string, id: string) {
+      if (!id.includes('node_modules') && (id.endsWith('.vue') || isCssFile(id))) {
+        console.log("🚀 ~ id:", id)
+        const newCode = await handleSprites(code,id)
+        if (newCode) {
+          return newCode
+        }
+      }
     },
     configureServer(server) {
       if (!enableDev) {

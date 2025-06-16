@@ -2,11 +2,13 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import ImageTools from 'vite-plugin-image-tools'
 import { resolve } from 'path'
+import vitePluginSprite from './sprites'
 
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
   build: {
+    assetsInlineLimit: 0,
     rollupOptions: {
       input: {
         index: resolve(__dirname, 'index.html'),
@@ -17,11 +19,17 @@ export default defineConfig({
   },
   plugins: [
     vue(),
+    // vitePluginSprite({
+    //   spriteDir: './src/assets/icons'
+    // }),
     ImageTools({
-      quality: 80,
-      enableWebp: true,
-      enableDev: true,
-      enableDevWebp: true,
+      quality: 70,
+      // enableWebp: true,
+      // enableDev: true,
+      // enableDevWebp: true,
+      spriteConfig: {
+        spriteDir: './src/assets/icons'
+      }
       // compatibility: false,
       // bodyWebpClassName: 'webp-1',
       // excludes: '',

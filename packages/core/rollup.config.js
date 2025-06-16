@@ -34,5 +34,5 @@ export default {
     }),
     terser()
   ],
-  external: ['fs', 'path', 'crypto', 'sharp']
+  external: ['fs', 'path', 'crypto', 'sharp','spritesmith']
 }

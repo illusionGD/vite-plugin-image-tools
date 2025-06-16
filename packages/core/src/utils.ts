@@ -1,4 +1,4 @@
-import { extname, join, parse } from 'path'
+import { extname, isAbsolute, join, parse, relative } from 'path'
 import { IMG_FORMATS_ENUM } from './constants'
 import { cwd } from 'process'
 import crypto from 'crypto'
@@ -14,6 +14,11 @@ export function getGlobalConfig() {
 
 export function setGlobalConfig(config: Partial<PluginOptions>) {
   Object.assign(globalConfig, DEFAULT_CONFIG, config)
+  globalConfig.spriteConfig = Object.assign(
+    {},
+    DEFAULT_CONFIG.spriteConfig,
+    config.spriteConfig
+  )
 }
 
 export function addImgWebpMap(name: string) {
@@ -43,7 +48,7 @@ export async function filterChunkImage(chunk: any) {
     return chunk.fileName ? false : await filterImage(chunk.fileName)
   } else {
     for (let index = 0; index < chunk.originalFileNames.length; index++) {
-      const path = chunk.originalFileNames[index];
+      const path = chunk.originalFileNames[index]
       const isTrue = await filterImage(path)
       return isTrue
     }
@@ -85,25 +90,22 @@ export async function filterImage(filePath: string) {
 
   // excludes
   if (excludes) {
-    if (typeof excludes === 'string') {
-      if (filePath.includes(excludes)) {
-        return false
-      }
-    } else if (excludes.test(filePath)) {
+    if (checkPattern(excludes, filePath)) {
       return false
     }
+    // if (typeof excludes === 'string') {
+    //   if (filePath.includes(excludes)) {
+    //     return false
+    //   }
+    // } else if (excludes.test(filePath)) {
+    //   return false
+    // }
   }
 
   // includes
   if (includes) {
-    if (typeof includes === 'string') {
-      if (!filePath.includes(includes)) {
-        return false
-      }
-    } else {
-      if (!includes.test(filePath)) {
-        return false
-      }
+    if (!checkPattern(includes, filePath)) {
+      return false
     }
   }
 
@@ -139,4 +141,37 @@ export function isAsyncFunction(fn: Function) {
 
 export function isBase64(url: string) {
   return url.startsWith('data:image/') && url.includes(';base64,')
+}
+
+export function checkPattern(pattern: string | RegExp, str: string) {
+  if (typeof pattern === 'string') {
+    if (!str.includes(pattern)) {
+      return false
+    }
+  } else {
+    if (!pattern.test(str)) {
+      return false
+    }
+  }
+
+  return true
+}
+
+export function isCssFile(id: string) {
+  return (
+    id.endsWith('.css') ||
+    id.endsWith('.scss') ||
+    id.endsWith('.sass') ||
+    id.endsWith('.less') ||
+    id.includes('vue&type=style')
+  )
+}
+
+export function isSubPath(subPath: string, basePath: string) {
+  const re = relative(basePath, subPath);
+  return (
+    !!re &&
+    !re.startsWith('..') &&
+    !isAbsolute(re)
+  );
 }
