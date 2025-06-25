@@ -49,28 +49,6 @@ importers:
         specifier: ^8.28.0
         version: 8.28.0(eslint@9.23.0(jiti@2.4.2))(typescript@5.7.3)
 
-  examples/test_vue:
-    dependencies:
-      vue:
-        specifier: ^3.5.13
-        version: 3.5.13(typescript@5.7.3)
-    devDependencies:
-      '@vitejs/plugin-vue':
-        specifier: ^5.2.1
-        version: 5.2.1(vite@6.2.0(@types/node@22.13.9)(jiti@2.4.2)(sass@1.86.0)(terser@5.39.0)(yaml@2.7.1))(vue@3.5.13(typescript@5.7.3))
-      postcss-scss:
-        specifier: ^4.0.9
-        version: 4.0.9(postcss@8.5.3)
-      sass:
-        specifier: ^1.86.0
-        version: 1.86.0
-      vite:
-        specifier: ^6.2.0
-        version: 6.2.0(@types/node@22.13.9)(jiti@2.4.2)(sass@1.86.0)(terser@5.39.0)(yaml@2.7.1)
-      vite-plugin-image-tools:
-        specifier: workspace:^
-        version: link:../../packages/core
-
   packages/core:
     dependencies:
       sharp:
@@ -110,6 +88,9 @@ importers:
       '@vue/compiler-sfc':
         specifier: ^3.5.16
         version: 3.5.16
+      magic-string:
+        specifier: ^0.30.17
+        version: 0.30.17
       node-html-parser:
         specifier: ^7.0.1
         version: 7.0.1
@@ -122,6 +103,28 @@ importers:
       spritesmith:
         specifier: ^3.5.1
         version: 3.5.1
+
+  packages/core/test:
+    dependencies:
+      vue:
+        specifier: ^3.5.13
+        version: 3.5.13(typescript@5.7.3)
+    devDependencies:
+      '@vitejs/plugin-vue':
+        specifier: ^5.2.1
+        version: 5.2.1(vite@6.2.0(@types/node@22.13.9)(jiti@2.4.2)(sass@1.86.0)(terser@5.39.0)(yaml@2.7.1))(vue@3.5.13(typescript@5.7.3))
+      postcss-scss:
+        specifier: ^4.0.9
+        version: 4.0.9(postcss@8.5.3)
+      sass:
+        specifier: ^1.86.0
+        version: 1.86.0
+      vite:
+        specifier: ^6.2.0
+        version: 6.2.0(@types/node@22.13.9)(jiti@2.4.2)(sass@1.86.0)(terser@5.39.0)(yaml@2.7.1)
+      vite-plugin-image-tools:
+        specifier: workspace:^
+        version: link:..
 
 packages:
 
@@ -3716,7 +3719,7 @@ snapshots:
 
   '@vue/compiler-core@3.5.13':
     dependencies:
-      '@babel/parser': 7.27.0
+      '@babel/parser': 7.27.5
       '@vue/shared': 3.5.13
       entities: 4.5.0
       estree-walker: 2.0.2
@@ -3742,7 +3745,7 @@ snapshots:
 
   '@vue/compiler-sfc@3.5.13':
     dependencies:
-      '@babel/parser': 7.27.0
+      '@babel/parser': 7.27.5
       '@vue/compiler-core': 3.5.13
       '@vue/compiler-dom': 3.5.13
       '@vue/compiler-ssr': 3.5.13

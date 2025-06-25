@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+// import ImageTools from '../src/index'
 import ImageTools from 'vite-plugin-image-tools'
 import { resolve } from 'path'
 import { readFileSync, statSync } from 'fs'
@@ -24,7 +25,7 @@ export default defineConfig({
     // }),
     ImageTools({
       quality: 70,
-      // enableWebp: true,
+      enableWebp: true,
       // enableDev: true,
       // enableDevWebp: true,
       spriteConfig: {
@@ -48,14 +49,12 @@ export default defineConfig({
         }
 
         const stats = statSync(path)
-        // 10kb以下不处理
-        if (stats.size <= 1024 * 1024 * 1) {
-            console.log("🚀 ~ 1024 * 1024 * 1:", 1024 * 1024 * 1)
-            console.log("🚀 ~ path:", path)
-        console.log("🚀 ~ stats.size:", stats.size)
+          // 10kb以下不处理
+        if (stats.size <= 1024 * 4) {
           return false
         }
-        return true
+          console.log("🚀 ~ path:", path)
+          return true
       }
     })
   ]

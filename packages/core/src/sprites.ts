@@ -12,6 +12,8 @@ import Spritesmith from 'spritesmith'
 import postcss, { Rule } from 'postcss'
 import cssParser from 'postcss-scss'
 import { type SFCDescriptor, parse as compilerParse } from '@vue/compiler-sfc'
+import { compileString } from 'sass'
+import MagicString from 'magic-string'
 
 export const originalStyles: {
   [key: string]: {
@@ -31,17 +33,17 @@ export const originalStyles: {
   }
 } = {}
 
-export function initSprite() {
+export async function initSprite() {
   const { spriteConfig } = getGlobalConfig()
   if (!spriteConfig || !spriteConfig.spriteDir) {
-    return Promise.reject(false)
+    return false
   }
   const { spriteDir } = spriteConfig
   if (typeof spriteDir === 'string') {
-    createSprites(spriteDir)
+    await createSprites(spriteDir)
   } else {
     for (let index = 0; index < spriteDir.length; index++) {
-      createSprites(spriteDir[index])
+      await createSprites(spriteDir[index])
     }
   }
 }
@@ -94,6 +96,19 @@ export async function createSprites(spriteDir: string) {
   return originalStyles
 }
 
+export async function handleSprites(code: string, id: string) {
+  if (id.endsWith('.vue')) {
+    return await handleVueSprite(code, id)
+  } else if (isCssFile(id)) {
+    const newCode = await handleSpriteCss(code, id)
+    return {
+      code: newCode.css,
+      map: newCode.map as any // Ensure compatibility with SourceMapInput
+    }
+  }
+}
+
+/** 过滤精灵图片 */
 export function filterSpriteImg(path: string) {
   const { spriteConfig } = getGlobalConfig()
   if (!spriteConfig || !spriteConfig.spriteDir) {
@@ -104,7 +119,9 @@ export function filterSpriteImg(path: string) {
     for (const key in originalStyles) {
       if (Object.prototype.hasOwnProperty.call(originalStyles, key)) {
         const { coordinates } = originalStyles[key]
-        const p = Object.keys(coordinates).find((p) => p === path)
+        const p = Object.keys(coordinates).find((p) => {
+          return p === path
+        })
         if (p) {
           return originalStyles[key]
         }
@@ -122,80 +139,47 @@ export function filterSpriteImg(path: string) {
   return false
 }
 
-export async function handleSprites(code: string, id: string) {
-  if (!(id.endsWith('.vue') || isCssFile(id))) {
-    return code
-  }
-
-  // 处理vue
-  if (id.endsWith('.vue')) {
-    handleVueSprite(code, id)
-  } else if (isCssFile(id)) {
-    handleSpriteCss(code, id)
-  }
-}
-
+/** 处理vue的css代码，替换精灵图 */
 export async function handleVueSprite(code: string, id: string) {
   const { descriptor } = compilerParse(code)
   if (!descriptor.styles.length) {
-    return code
+    return { code, map: null }
   }
+
+  const ms = new MagicString(code)
 
   for (const style of descriptor.styles) {
-    style.content = await handleSpriteCss(style.content, id)
-    console.log('🚀 ~ style.content:', style.content)
+    const transformedCss = await handleSpriteCss(style.content, id)
+    ms.overwrite(
+      style.loc.start.offset,
+      style.loc.end.offset,
+      transformedCss.css
+    )
   }
 
-  return descriptor.styles.map((style) => style.content).join('\n')
+  return {
+    code: ms.toString(),
+    map: ms.generateMap({ hires: true })
+  }
 }
 
+/** 处理css代码，替换精灵图 */
 export async function handleSpriteCss(css: string, id: string) {
-  const result = await postcss([
+  const compileCss = await compileString(css)
+  const res = await postcss([
     (root: postcss.Root) => {
       root.walkRules((rule: postcss.Rule) => {
-        processRule(rule, id)
-        // rule.walkDecls(/background(-image)?$/i, (decl: postcss.Declaration) => {
-        //   const { value } = decl
-        //   const imageMatch = value.match(/url\((['"]?)([^"')]+)\1\)/)
-
-        //   if (!imageMatch || !imageMatch[2]) return
-
-        //   const url = imageMatch[2]
-        //   const filePath = resolve(parse(id).dir, url)
-        //   const targetSprite = filterSpriteImg(filePath)
-
-        //   if (!targetSprite) return
-
-        //   const { outPath, coordinates, properties } = targetSprite
-        //   const spriteBase = parse(outPath).base
-        //   const base = parse(url).base
-
-        //   decl.value = value.replace(
-        //     new RegExp(url, 'g'),
-        //     url.replace(base, spriteBase)
-        //   )
-
-        //   const props: { [key: string]: string } = {
-        //     'background-position': `-${coordinates[filePath].x}px -${coordinates[filePath].y}px`,
-        //     'background-size': `${properties.width}px ${properties.height}px`,
-        //     'background-repeat': 'no-repeat'
-        //   }
-
-        //   for (const key in props) {
-        //     rule.walkDecls(key, (existingDecl) => existingDecl.remove())
-        //     rule.append({ prop: key, value: props[key] })
-        //   }
-        // })
+        processSpritesBgRule(rule, id)
       })
     }
-  ]).process(css, { from: undefined, parser: cssParser })
-  return result.css
+  ]).process(compileCss.css, { from: undefined, parser: cssParser })
+  return res
 }
 
 /**
- * 递归处理嵌套规则
+ * 递归处理嵌套css背景规则
  */
-function processRule(rule: Rule, id: string) {
+function processSpritesBgRule(rule: Rule, id: string) {
   rule.walkDecls(/background(-image)?$/i, (decl: postcss.Declaration) => {
     const { value } = decl
     const imageMatch = value.match(/url\((['"]?)([^"')]+)\1\)/)
@@ -203,7 +187,10 @@ function processRule(rule: Rule, id: string) {
     if (!imageMatch || !imageMatch[2]) return
 
     const url = imageMatch[2]
-    const filePath = resolve(parse(id).dir, url)
+    const filePath = /^(\.\/)/.test(url)
+      ? join(parse(id).dir, url)
+      : join(cwd(), url)
+
     const targetSprite = filterSpriteImg(filePath)
 
     if (!targetSprite) return
@@ -224,16 +211,18 @@ function processRule(rule: Rule, id: string) {
     }
 
     for (const key in props) {
-      rule.walkDecls(key, (existingDecl) => {existingDecl.remove(); return})
+      rule.walkDecls(key, (existingDecl) => {
+        existingDecl.remove()
+        return
+      })
       rule.append({ prop: key, value: props[key] })
     }
   })
 
   // 递归子规则
-  rule.nodes?.forEach((node) => {
-    console.log("🚀 ~ node:", node)
-    if (node.type === 'rule') {
-      processRule(node as Rule, id)
-    }
-  })
+  // rule.nodes?.forEach((node) => {
+  //   if (node.type === 'rule') {
+  //     processSpritesBgRule(node as Rule, id)
+  //   }
+  // })
 }

@@ -43,7 +43,7 @@ import img from './assets/import.jpg'
   filter: drop-shadow(0 0 2em #42b883aa);
 }
 .test-css-img {
-    background-image: url('./assets/image.png');
+  background-image: url('./assets/image.png');
   .img-test {
     background-image: url('./assets/css.jpg');
     width: 1146px;

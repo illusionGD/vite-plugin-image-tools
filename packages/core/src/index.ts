@@ -15,7 +15,8 @@ import {
 } from './utils'
 import type { PluginOptions } from './types'
 import { transformWebpExtInHtml } from './transform'
-import { handleSprites, handleVueSprite, initSprite } from './sprites'
+import { handleSpriteCss, handleSprites, handleVueSprite, initSprite } from './sprites'
+import MagicString from 'magic-string'
 
 export default function ImageTools(
   options: Partial<PluginOptions> = {}
@@ -31,7 +32,7 @@ export default function ImageTools(
   if (!existsSync(cachePath)) {
     mkdirSync(cachePath, { recursive: true })
   }
-  
+
   initSprite()
 
   return {
@@ -40,24 +41,13 @@ export default function ImageTools(
       isBuild = command === 'build'
     },
     async load(id: string) {
-      // if (!id.includes('node_modules') && (id.endsWith('.vue') || isCssFile(id))) {
-      //   console.log("🚀 ~ id:", id)
-      //   const code = readFileSync(id).toString()
-      //   const newCode = await handleSprites(code,id)
-      //   if (newCode) {
-      //     return newCode
-      //   }
-      // }
-      // handleSprites(code,id)
+      if (!isBuild || id.includes('node_modules')) return
+      const code = readFileSync(id).toString()
+      return await handleSprites(code, id)
     },
     async transform(code: string, id: string) {
-      if (!id.includes('node_modules') && (id.endsWith('.vue') || isCssFile(id))) {
-        console.log("🚀 ~ id:", id)
-        const newCode = await handleSprites(code,id)
-        if (newCode) {
-          return newCode
-        }
-      }
+      if (isBuild || id.includes('node_modules')) return
+      return await handleSprites(code, id)
     },
     configureServer(server) {
       if (!enableDev) {
@@ -71,19 +61,19 @@ export default function ImageTools(
           const filePath = decodeURIComponent(
             path.resolve(process.cwd(), url.split('?')[0].slice(1) || '')
           )
-      
+
           // const isTrue = await handleFilterPath(url)
           // if (!isTrue) {
           //   return next()
           // }
-      
+
           const { ext } = parse(filePath)
           const type = enableDevWebp
             ? IMG_FORMATS_ENUM.webp
             : ext.replace('.', '')
 
           const buffer = await processImage(filePath)
-          
+
           if (!buffer) {
             return next()
           }
