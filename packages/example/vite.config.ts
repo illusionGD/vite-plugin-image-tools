@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+// import ImageTools from '../src/index'
 import ImageTools from 'vite-plugin-image-tools'
 import { resolve } from 'path'
 import { readFileSync, statSync } from 'fs'
@@ -8,6 +9,7 @@ import { readFileSync, statSync } from 'fs'
 export default defineConfig({
   base: './',
   build: {
+    assetsInlineLimit: 0,
     rollupOptions: {
       input: {
         index: resolve(__dirname, 'index.html'),
@@ -18,12 +20,22 @@ export default defineConfig({
   },
   plugins: [
     vue(),
+    // vitePluginSprite({
+    //   spriteDir: './src/assets/icons'
+    // }),
     ImageTools({
-      quality: 80,
+      quality: 70,
       enableWebp: true,
-      enableDev: true,
-      enableDevWebp: true,
-      compatibility: true,
+      // enableDev: true,
+      // enableDevWebp: true,
+      spritesConfig: {
+        rules: [
+            {
+               dir: './src/assets/icons'
+            }
+        ]
+      },
+      // compatibility: false,
       // bodyWebpClassName: 'webp-1',
       // excludes: '',
       // sharpConfig: {
@@ -41,14 +53,12 @@ export default defineConfig({
         }
 
         const stats = statSync(path)
-        // 10kb以下不处理
-        if (stats.size <= 1024 * 1024 * 1) {
-            console.log("🚀 ~ 1024 * 1024 * 1:", 1024 * 1024 * 1)
-            console.log("🚀 ~ path:", path)
-        console.log("🚀 ~ stats.size:", stats.size)
+          // 10kb以下不处理
+        if (stats.size <= 1024 * 4) {
           return false
         }
-        return true
+          console.log("🚀 ~ path:", path)
+          return true
       }
     })
   ]
