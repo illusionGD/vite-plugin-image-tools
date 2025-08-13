@@ -1,5 +1,5 @@
 {
-  "name": "test_vue",
+  "name": "example",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,9 +12,13 @@
     "vue": "^3.5.13"
   },
   "devDependencies": {
+    "@types/node": "^22.13.9",
     "@vitejs/plugin-vue": "^5.2.1",
     "postcss-scss": "^4.0.9",
     "sass": "^1.86.0",
+    "spritesmith": "^3.5.1",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.7.2",
     "vite": "^6.2.0",
     "vite-plugin-image-tools": "workspace:^"
   }

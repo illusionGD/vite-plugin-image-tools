@@ -28,8 +28,12 @@ export default defineConfig({
       enableWebp: true,
       // enableDev: true,
       // enableDevWebp: true,
-      spriteConfig: {
-        spriteDir: './src/assets/icons'
+      spritesConfig: {
+        rules: [
+            {
+               dir: './src/assets/icons'
+            }
+        ]
       },
       // compatibility: false,
       // bodyWebpClassName: 'webp-1',
