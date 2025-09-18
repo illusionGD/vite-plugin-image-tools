@@ -1,3 +1,4 @@
+// vite-plugin-image-compress.ts
 import type { PluginOption, ResolvedConfig } from 'vite'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import path, { join, parse } from 'path'
@@ -8,13 +9,15 @@ import {
     setGlobalConfig,
     handleWebpImgMap,
     getGlobalConfig,
-    handleReplaceWebp
+    handleReplaceWebp,
+    compressCache
 } from './utils'
 import type { PluginOptions } from './types'
 import { transformWebpExtInHtml } from './transform'
 import { handleSprites, initSprite } from './sprites'
+import { printLog } from './log'
 
-export default function VitePluginImageTools(
+export default function ImageTools(
     options: Partial<PluginOptions> = {}
 ): PluginOption {
     setGlobalConfig(options)
@@ -134,7 +137,10 @@ export default function VitePluginImageTools(
             await handleImgBundle(bundle)
         },
         async writeBundle(opt, bundle) {
-            const { enableWebp, compatibility } = getGlobalConfig()
+            const { enableWebp, compatibility, log } = getGlobalConfig()
+            if (log) {
+                printLog()
+            }
             if (!enableWebp) {
                 return
             }

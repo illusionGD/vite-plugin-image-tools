@@ -28,55 +28,53 @@ interface sharpConfigType {
 }
 
 export type PluginOptions = {
-    /** Compression quality */
+    /** 压缩质量 */
     quality: number
-    /** Whether to enable in development environment */
+    /** 开发环境是否开启 */
     enableDev: boolean
-    /** Whether to enable WebP in development environment */
+    /** 开发环境是否开启webp */
     enableDevWebp: boolean
-    /** Whether to enable WebP in production build */
+    /** 打包是否开启webp */
     enableWebp: boolean
-    /** Included files */
+    /** 包含 */
     includes: string | RegExp
-    /** Excluded files */
+    /** 排除 */
     excludes: string | RegExp
-    /** Cache directory for development environment images (default: node_modules/.cache/vite-plugin-image) */
+    /** 开发环境图片缓存路径，默认node_modules/.cache/vite-plugin-image */
     cacheDir: string
-    /** Sharp configuration */
+    /** sharp配置 */
     sharpConfig: sharpConfigType
-    /** SVGO configuration */
+    /** svgo配置 */
     svgoConfig: svgoConfig
-    /** Whether to enable compatibility mode */
     compatibility: boolean
-    /** CSS class name for WebP body elements */
     bodyWebpClassName: string
+    /** 是否打印日志，默认true */
+    log: boolean
     /**
-     * Filter function
-     * @param path Image path
+     * 过滤函数
+     * @param path 图片路径
      */
     filter?: (path: string) => boolean
-    /** WebP configuration for production build */
+    /** 打包webp配置 */
     webpConfig?: {
         /**
-         * Filter function
-         * @param path Image path
+         * 过滤函数
+         * @param path 图片路径
          */
         filter?: (path: string) => boolean
     }
-    /** Sprite configuration */
+    /** 精灵图配置 */
     spritesConfig?: {
         rules: {
-            /** Directory */
+            /** 文件夹 */
             dir: string
-            /** Suffix (default: 'sprites') */
+            /** 后缀，默认sprites */
             suffix?: string
-            /** Padding */
             padding?: number
-            /** Compression quality */
+            /** 压缩质量 */
             quality?: number
-            /** CSS scaling */
+            /** css缩放 */
             scale?: number
-            /** Packing algorithm */
             algorithm?:
                 | 'top-down'
                 | 'left-right'
@@ -84,13 +82,12 @@ export type PluginOptions = {
                 | 'alt-diagonal'
                 | 'binary-tree'
         }[]
-        /** Included files */
+        /** 包含 */
         includes?: string | RegExp
-        /** Excluded files */
+        /** 排除 */
         excludes?: string | RegExp
-        /** Suffix (default: 'sprites') */
+        /** 后缀，默认sprites */
         suffix?: string
-        /** Packing algorithm */
         algorithm?:
             | 'top-down'
             | 'left-right'
@@ -98,10 +95,10 @@ export type PluginOptions = {
             | 'alt-diagonal'
             | 'binary-tree'
         /**
-         * Unit conversion
-         * @param unit Unit in px
-         * @param filePath Path of individual image
-         * @returns Converted unit string
+         * 单位转换
+         * @param unit 单位px
+         * @param filePath 单张图片的路径
+         * @returns
          */
         transformUnit?: (unit: string, filePath: string) => string
     }

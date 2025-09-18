@@ -10,19 +10,42 @@ import MagicString from 'magic-string'
 import type { SpritesStylesType } from './types'
 import { pressBufferToImage } from './compress'
 import { IMG_FORMATS_ENUM } from './constants'
-import Spritesmith from 'spritesmith'
+import postcssLess from 'postcss-less'
 
+/** css扩展语言 */
+const EXTEND_CSS = {
+    scss: 'scss',
+    sass: 'sass',
+    less: 'less'
+} as const
+
+type ExtendCssType = keyof typeof EXTEND_CSS
+
+/**
+ * 精灵图样式存储对象
+ * 用于存储每个精灵图的坐标信息、尺寸信息和输出路径
+ */
 const originalStyles: {
     [key: string]: SpritesStylesType
 } = {}
 
+/**
+ * 精灵图查找索引，用于快速查找图片属于哪个精灵图
+ */
 const spriteImageIndex: Map<string, string> = new Map()
 
+/**
+ * 清理精灵图缓存
+ */
 export function clearSpriteCache() {
     Object.keys(originalStyles).forEach((key) => delete originalStyles[key])
     spriteImageIndex.clear()
 }
 
+/**
+ * 初始化精灵图生成流程
+ * 读取配置中的所有规则，为每个目录生成对应的精灵图
+ */
 export async function initSprite() {
     const { spritesConfig } = getGlobalConfig()
 
@@ -32,6 +55,7 @@ export async function initSprite() {
 
     const rules = spritesConfig?.rules || []
 
+    // 并行处理所有规则
     try {
         await Promise.all(
             rules.map((rule) => {
@@ -43,6 +67,11 @@ export async function initSprite() {
     }
 }
 
+/**
+ * 为指定目录生成精灵图
+ * @param spritesDir 精灵图源文件目录路径
+ * @returns 返回精灵图样式信息
+ */
 export async function createSprites(spritesDir: string) {
     const { spritesConfig, quality, sharpConfig } = getGlobalConfig()
 
@@ -80,6 +109,7 @@ export async function createSprites(spritesDir: string) {
     if (files.length === 0) return
 
     try {
+        const Spritesmith = (await import('spritesmith')).default
         const result = await new Promise<any>((resolve, reject) => {
             Spritesmith.run(
                 { src: files, algorithm, padding: rule?.padding || 0 },
@@ -128,10 +158,13 @@ const FILE_TYPE_HANDLERS: Record<
     string,
     (code: string, id: string) => Promise<any>
 > = {
-    scss: (code: string, id: string) => handleSpriteScss(code, id),
-    sass: (code: string, id: string) => handleSpriteScss(code, id),
+    scss: (code: string, id: string) =>
+        handleSpriteExtendCss(code, id, EXTEND_CSS.scss),
+    sass: (code: string, id: string) =>
+        handleSpriteExtendCss(code, id, EXTEND_CSS.sass),
     css: (code: string, id: string) => handleSpriteCss(code, id),
-    less: (code: string, id: string) => handleSpriteCss(code, id),
+    less: (code: string, id: string) =>
+        handleSpriteExtendCss(code, id, EXTEND_CSS.less),
     vue: (code: string, id: string) => handleVueSprite(code, id)
 }
 
@@ -204,10 +237,14 @@ export async function handleVueSprite(code: string, id: string) {
     const ms = new MagicString(code)
 
     for (const style of descriptor.styles) {
-        const isScss = style.lang === 'scss' || style.lang === 'sass'
-        // 直接处理原始 SCSS 代码，不进行编译
-        const transformedScss = isScss
-            ? await handleSpriteScss(style.content, id)
+        const isExtend = EXTEND_CSS[style.lang as ExtendCssType]
+
+        const transformedScss = isExtend
+            ? await handleSpriteExtendCss(
+                  style.content,
+                  id,
+                  style.lang as ExtendCssType
+              )
             : await handleSpriteCss(style.content, id)
         ms.overwrite(
             style.loc.start.offset,
@@ -240,26 +277,31 @@ export async function handleSpriteCss(css: string, id: string) {
 }
 
 /**
- * 处理 SCSS 代码中的精灵图替换
- * @param scss SCSS 源码
+ * 处理 css扩展语言中的精灵图替换
+ * @param code 样式源码
  * @param id 文件路径
  * @returns 处理后的 PostCSS 结果
  */
-export async function handleSpriteScss(scss: string, id: string) {
+export async function handleSpriteExtendCss(
+    code: string,
+    id: string,
+    type: ExtendCssType
+) {
     try {
-        const css = await flattenScssSelectors(scss)
+        const css = await flattenSelectors(code, type)
+        const parser = type === 'scss' ? postcssScss : postcssLess
         const res = await postcss([
             (root: postcss.Root) => {
                 root.walkRules((rule: postcss.Rule) => {
                     processSpritesBgRule(rule, id)
                 })
             }
-        ]).process(css, { from: undefined, parser: postcssScss })
+        ]).process(css, { from: undefined, parser })
 
         return res
     } catch (error) {
         // 降级处理：直接当作 CSS 处理
-        return await handleSpriteCss(scss, id)
+        return await handleSpriteCss(code, id)
     }
 }
 
@@ -392,21 +434,27 @@ function getBgCss(
 }
 
 /**
- * 拍平 SCSS 嵌套选择器结构
- * @param scssCode SCSS 源码
+ * 拍平 样式 嵌套选择器结构
+ * @param code 样式 源码
  * @returns 拍平后的 CSS
  */
-export async function flattenScssSelectors(scssCode: string): Promise<string> {
+export async function flattenSelectors(
+    code: string,
+    type: ExtendCssType
+): Promise<string> {
     try {
-        const result = await postcss([postcssNested()]).process(scssCode, {
-            parser: postcssScss,
+        const parser =
+            type === 'scss' || type === 'sass' ? postcssScss : postcssLess
+
+        const result = await postcss([postcssNested()]).process(code, {
+            parser,
             from: undefined
         })
 
         return result.css
     } catch (error) {
-        console.warn('SCSS 拍平处理失败，返回原始代码:', error)
-        return scssCode
+        console.warn(type + '样式拍平处理失败，返回原始代码:', error)
+        return code
     }
 }
 

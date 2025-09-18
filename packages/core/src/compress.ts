@@ -1,26 +1,27 @@
 import path, { join, parse } from 'path'
 import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from './constants'
 import {
-    filterImage,
-    handleFilterPath,
     handleReplaceWebp,
     getCacheKey,
     getGlobalConfig,
     replaceWebpExt,
     filterChunkImage,
     getImgWebpMap,
-    isAsyncFunction
+    isAsyncFunction,
+    compressCache
 } from './utils'
 import sharp, { type FormatEnum } from 'sharp'
 import { existsSync, readdirSync, readFileSync, writeFile } from 'fs'
 import type {
+    AnyObject,
     ImgFormatType,
     SharpImgFormatType,
     SharpOptionsType
 } from './types'
 import { transformWebpExtInCss } from './transform'
-import { optimize } from 'svgo'
+import { logSize } from './log'
 
+/** 格式化jpeg后缀 */
 function formatJPGExt(type: string): ImgFormatType {
     const ext = type.includes('.') ? type.replace('.', '') : type
     return ext === IMG_FORMATS_ENUM.jpg || ext === IMG_FORMATS_ENUM.jpeg
@@ -28,6 +29,7 @@ function formatJPGExt(type: string): ImgFormatType {
         : (ext as ImgFormatType)
 }
 
+/** 压缩图片buffer */
 export async function pressBufferToImage(
     buffer: Buffer,
     type: ImgFormatType,
@@ -37,7 +39,8 @@ export async function pressBufferToImage(
 
     const globalConfig = getGlobalConfig()
     const options = Object.assign({ quality: globalConfig.quality }, opt || {})
-    if (options.quality >= 100) {
+    const {format} = await sharp(buffer).metadata()
+    if (options.quality >= 100 && format && format.includes(type)) {
         return buffer
     }
     const newBuffer = await sharp(buffer).toFormat(key, options).toBuffer()
@@ -45,6 +48,12 @@ export async function pressBufferToImage(
     return newBuffer
 }
 
+const devNoChangeFiles: string[] = []
+
+/**
+ * 处理开发时的图片
+ * @param filePath
+ */
 export async function processImage(filePath: string) {
     const {
         enableDevWebp,
@@ -57,8 +66,19 @@ export async function processImage(filePath: string) {
     } = getGlobalConfig()
     const { ext, name } = parse(filePath)
 
+    // 读取不转换记录的文件路径，返回原图数据
+    if (devNoChangeFiles.includes(filePath)) {
+        const file = readFileSync(filePath)
+        return { buffer: file, type: ext.replace('.', '') }
+    }
+
     let buildWebp = false
-    if (enableDevWebp && webpConfig && webpConfig.filter) {
+    if (
+        enableDevWebp &&
+        !ext.includes(IMG_FORMATS_ENUM.webp) &&
+        webpConfig &&
+        webpConfig.filter
+    ) {
         if (webpConfig.filter instanceof Function) {
             if (isAsyncFunction(webpConfig.filter)) {
                 buildWebp = await webpConfig.filter(filePath)
@@ -108,17 +128,25 @@ export async function processImage(filePath: string) {
         return
     }
 
+    // 如果转化压缩后比原体积大，则返回原图数据
+    if (buffer.length < newBuffer.length) {
+        // 缓存路径，避免下次重复打包压缩
+        devNoChangeFiles.push(filePath)
+        return { buffer, type: ext.replace('.', '') }
+    }
+
     writeFile(cachePath, newBuffer, () => {})
 
     return { buffer: newBuffer, type }
 }
 
+/** 处理图片bundle，压缩&转webp */
 export async function handleImgBundle(bundle: any) {
     const webpMap = getImgWebpMap()
 
     for (const key in bundle) {
         const chunk = bundle[key] as any
-        const { ext } = parse(key)
+        const { ext, base } = parse(key)
         const { enableWebp, sharpConfig, filter, compatibility } =
             getGlobalConfig()
 
@@ -147,16 +175,29 @@ export async function handleImgBundle(bundle: any) {
 
         if (transformWebp) {
             try {
-                const webpBuffer = await pressBufferToImage(
-                    chunk.source,
-                    IMG_FORMATS_ENUM.webp,
-                    sharpConfig[IMG_FORMATS_ENUM.webp]
-                )
+                const webpBuffer =
+                    compressCache[chunk.fileName] ||
+                    (await pressBufferToImage(
+                        chunk.source,
+                        IMG_FORMATS_ENUM.webp,
+                        sharpConfig[IMG_FORMATS_ENUM.webp]
+                    ))
                 const webpName = replaceWebpExt(key)
                 const webpChunk = structuredClone(chunk)
                 webpChunk.source = webpBuffer
                 webpChunk.fileName = webpName
                 bundle[webpName] = webpChunk
+                // 缓存
+                compressCache[chunk.fileName] = webpChunk.source
+
+                if (!compressCache[chunk.fileName]) {
+                    logSize.push({
+                        fileName: base,
+                        webpName: replaceWebpExt(base),
+                        originSize: chunk.source.length,
+                        compressSize: webpBuffer.length
+                    })
+                }
             } catch (error) {
                 throw new Error(`Error processing image ${key}: ${error}`)
             }
@@ -167,6 +208,11 @@ export async function handleImgBundle(bundle: any) {
             continue
         }
         if (chunk.source && chunk.source instanceof Buffer) {
+            // 读缓存
+            if (compressCache[chunk.fileName]) {
+                chunk.source = compressCache[chunk.fileName]
+                continue
+            }
             const pressBuffer = isSvg
                 ? await compressSvg(chunk.source)
                 : await pressBufferToImage(
@@ -174,14 +220,25 @@ export async function handleImgBundle(bundle: any) {
                       format,
                       sharpConfig[format]
                   )
-            chunk.source = pressBuffer
+            // 比对前后压缩大小，如果压缩后更大则不替换
+            if (chunk.source.length > pressBuffer.length) {
+                logSize.push({
+                    fileName: base,
+                    originSize: chunk.source.length,
+                    compressSize: pressBuffer.length
+                })
+                chunk.source = pressBuffer
+                // 缓存
+                compressCache[chunk.fileName] = chunk.source
+            }
         }
     }
 }
-
+/** 压缩svg图片 */
 export async function compressSvg(svg: string) {
     const { svgoConfig } = getGlobalConfig()
     try {
+        const { optimize } = (await import('svgo')).default
         const result = optimize(svg, svgoConfig)
 
         return Buffer.from(result.data)

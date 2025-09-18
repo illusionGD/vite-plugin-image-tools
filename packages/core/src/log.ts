@@ -1,0 +1,82 @@
+import pc from 'picocolors'
+
+interface LogSizeType {
+    fileName: string
+    webpName?: string
+    logName?: string
+    originSize: number
+    compressSize: number
+}
+
+export const logSize: LogSizeType[] = []
+
+/**
+ * 格式化文件大小
+ * @param size 文件大小（字节数）
+ * @param decimals 保留小数位数，默认 2
+ * @returns 格式化后的字符串
+ */
+function formatFileSize(size: number, decimals: number = 2): string {
+    if (size === 0) return '0 B'
+
+    const k = 1024
+    const units = ['B', 'KB', 'MB', 'GB', 'TB']
+    const i = Math.floor(Math.log(size) / Math.log(k))
+
+    return (
+        parseFloat((size / Math.pow(k, i)).toFixed(decimals)) + ' ' + units[i]
+    )
+}
+
+function roundTo(num: number, decimals: number): number {
+    const factor = Math.pow(10, decimals)
+    return Math.round(num * factor) / factor
+}
+
+export function printLog() {
+    logSize.forEach((item) => {
+        const { webpName, fileName } = item
+        item.logName = webpName ? fileName + ' ---> ' + webpName : fileName
+    })
+
+    const maxLen = logSize.reduce(
+        (prev, cur) => Math.max(prev, cur.logName?.length || 0),
+        0
+    )
+
+    console.log(
+        pc.greenBright(
+            '-------------- vite-plugin-images-tool log start --------------'
+        )
+    )
+    let totalSize = 0
+    let compressedSize = 0
+    logSize.forEach(({ fileName, originSize, compressSize, logName }) => {
+        totalSize += originSize
+        compressedSize += compressSize
+        const spaceNum = Math.abs(maxLen - (logName?.length || 0))
+        let name = logName
+        for (let index = 0; index < spaceNum; index++) {
+            name += ' '
+        }
+        name += '   '
+        const origin = pc.bold(formatFileSize(originSize))
+        const compress = pc.bold(formatFileSize(compressSize))
+        const rate = pc.green(
+            roundTo(((originSize - compressSize) / originSize) * 100, 2) + '%↓'
+        )
+        console.log(
+            `${pc.cyan(name)} ${origin} ---> ${compress} | ${pc.yellow('rate:')} ${rate}`
+        )
+    })
+    console.log(
+        pc.bold(
+            `total images size: ${pc.bold(formatFileSize(totalSize))} ---> ${pc.bold(formatFileSize(compressedSize))} | ${pc.green(`${roundTo(((totalSize - compressedSize) / totalSize) * 100, 2)}%↓`)}`
+        )
+    )
+    console.log(
+        pc.greenBright(
+            '-------------- vite-plugin-images-tool log end --------------'
+        )
+    )
+}
