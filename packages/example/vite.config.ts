@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 // import ImageTools from '../src/index'
-import ImageTools from 'vite-plugin-image-tools'
+import ImageTools from '../core/src/index'
 import { resolve } from 'path'
 import { readFileSync, statSync } from 'fs'
 
@@ -9,14 +9,19 @@ import { readFileSync, statSync } from 'fs'
 export default defineConfig({
   base: './',
   build: {
-    assetsInlineLimit: 0,
+    assetsInlineLimit: (file: string) => {
+  
+        return false
+    },
     rollupOptions: {
       input: {
         index: resolve(__dirname, 'index.html'),
         index_2: resolve(__dirname, 'index_2.html'),
         test: resolve(__dirname, './src/pages/test.html')
-      }
-    }
+      },
+      
+    },
+    
   },
   plugins: [
     vue(),
@@ -30,9 +35,9 @@ export default defineConfig({
       // enableDevWebp: true,
       spritesConfig: {
         rules: [
-            {
-               dir: './src/assets/icons'
-            }
+          {
+            dir: './src/assets/icons'
+          }
         ]
       },
       // compatibility: false,
@@ -53,13 +58,20 @@ export default defineConfig({
         }
 
         const stats = statSync(path)
-          // 10kb以下不处理
+        // 10kb以下不处理
         if (stats.size <= 1024 * 4) {
           return false
         }
-          console.log("🚀 ~ path:", path)
-          return true
+        //   console.log("🚀 ~ path:", path)
+        return true
       }
     })
-  ]
+  ],
+//   experimental: {
+//     renderBuiltUrl(filename, opt) {
+//       console.log('🚀 ~ opt:', opt)
+//       console.log('🚀 ~ filename:', filename)
+//       return filename
+//     }
+//   }
 })

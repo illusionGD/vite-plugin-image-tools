@@ -41,3 +41,6 @@ export const DEFAULT_CONFIG: PluginOptions = {
         algorithm: 'binary-tree'
     }
 }
+
+export const isWindows =
+  typeof process !== 'undefined' && process.platform === 'win32'

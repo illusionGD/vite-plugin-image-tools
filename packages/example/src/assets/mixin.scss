@@ -1,0 +1,10 @@
+@mixin text-overflow($row) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    -webkit-line-clamp: $row;
+    /* 控制显示行数 */
+    -webkit-box-orient: vertical;
+}

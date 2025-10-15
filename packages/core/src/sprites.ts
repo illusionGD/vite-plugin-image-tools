@@ -1,33 +1,39 @@
-import { join, parse, resolve } from 'path'
-import { checkPattern, getGlobalConfig, isCssFile } from './utils'
+import { basename, join, parse, relative, resolve } from 'path'
+import {
+    checkPattern,
+    getGlobalConfig,
+    getRelativeAssetPath,
+    isBase64,
+    isCssFile,
+    normalizePath
+} from './utils'
 import { cwd } from 'process'
-import { existsSync, readdirSync, writeFileSync } from 'fs'
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs'
 import postcss, { Declaration, Rule } from 'postcss'
-import postcssNested from 'postcss-nested'
-import * as postcssScss from 'postcss-scss'
-import { parse as compilerParse } from '@vue/compiler-sfc'
-import MagicString from 'magic-string'
-import type { SpritesStylesType } from './types'
+import type { AnyObject, ImgFormatType, SpritesStylesType } from './types'
 import { pressBufferToImage } from './compress'
 import { IMG_FORMATS_ENUM } from './constants'
-import postcssLess from 'postcss-less'
-
-/** css扩展语言 */
-const EXTEND_CSS = {
-    scss: 'scss',
-    sass: 'sass',
-    less: 'less'
-} as const
-
-type ExtendCssType = keyof typeof EXTEND_CSS
+import type { PluginContext } from 'rollup'
 
 /**
  * 精灵图样式存储对象
- * 用于存储每个精灵图的坐标信息、尺寸信息和输出路径
+ * 用于存储每个精灵图的坐标信息、尺寸信息、输出路径、vite引用id等
  */
 const originalStyles: {
     [key: string]: SpritesStylesType
 } = {}
+
+/**
+ * 打包bundle单个图片对应的精灵图信息对象
+ */
+const bundleStyles = new Map<
+    string,
+    {
+        styles: SpritesStylesType
+        /**绝对路径 */
+        absolutePath: string
+    }
+>()
 
 /**
  * 精灵图查找索引，用于快速查找图片属于哪个精灵图
@@ -46,7 +52,7 @@ export function clearSpriteCache() {
  * 初始化精灵图生成流程
  * 读取配置中的所有规则，为每个目录生成对应的精灵图
  */
-export async function initSprite() {
+export async function initSprite(that: PluginContext) {
     const { spritesConfig } = getGlobalConfig()
 
     if (!checkSpriteConfig()) {
@@ -62,6 +68,51 @@ export async function initSprite() {
                 return createSprites(rule.dir)
             })
         )
+
+        if (that.environment.config.command === 'build') {
+            // emitFile，将精灵图加入打包bundle
+            Object.keys(originalStyles).forEach((dir) => {
+                const { outPathName, image } = originalStyles[dir]
+                const spritesPath = join(dir, outPathName)
+                const referenceId = that.emitFile({
+                    type: 'asset',
+                    name: outPathName,
+                    originalFileName: normalizePath(
+                        relative(that.environment.config.root, spritesPath)
+                    ),
+                    source: image
+                })
+                // 添加引用id
+                originalStyles[dir].referenceId = referenceId
+            })
+
+            // 处理base64小图
+            const assetsInlineLimit =
+                that.environment.config.build.assetsInlineLimit
+            if (assetsInlineLimit) {
+                Object.keys(originalStyles).map((dir) => {
+                    const { coordinates } = originalStyles[dir]
+                    for (const filePath in coordinates) {
+                        const buffer = readFileSync(filePath)
+                        const { ext } = parse(filePath)
+                        if (
+                            (typeof assetsInlineLimit === 'number' &&
+                                buffer.length <= assetsInlineLimit) ||
+                            (assetsInlineLimit instanceof Function &&
+                                assetsInlineLimit(filePath, buffer))
+                        ) {
+                            const key =
+                                `data:image/${ext.replace('.', '')};base64,` +
+                                buffer.toString('base64')
+                            bundleStyles.set(key, {
+                                styles: originalStyles[dir],
+                                absolutePath: filePath
+                            })
+                        }
+                    }
+                })
+            }
+        }
     } catch (error) {
         console.log('[Sprite Error]', error)
     }
@@ -94,6 +145,7 @@ export async function createSprites(spritesDir: string) {
     const { name } = parse(dir)
     const outPathName = `${name}-${suffix}.png`
 
+    //  过滤图片
     const files = readdirSync(dir)
         .map((name) => join(dir, name))
         .filter((path) => {
@@ -152,60 +204,8 @@ export async function createSprites(spritesDir: string) {
 }
 
 /**
- * 文件类型处理策略映射
- */
-const FILE_TYPE_HANDLERS: Record<
-    string,
-    (code: string, id: string) => Promise<any>
-> = {
-    scss: (code: string, id: string) =>
-        handleSpriteExtendCss(code, id, EXTEND_CSS.scss),
-    sass: (code: string, id: string) =>
-        handleSpriteExtendCss(code, id, EXTEND_CSS.sass),
-    css: (code: string, id: string) => handleSpriteCss(code, id),
-    less: (code: string, id: string) =>
-        handleSpriteExtendCss(code, id, EXTEND_CSS.less),
-    vue: (code: string, id: string) => handleVueSprite(code, id)
-}
-
-/**
- * 根据文件类型处理精灵图替换
- * @param code 源代码内容
- * @param id 文件路径标识
- * @returns 处理后的代码和 sourcemap
- */
-export async function handleSprites(code: string, id: string) {
-    // 确定文件类型
-    let fileType: string | null = null
-
-    if (id.endsWith('.vue')) {
-        fileType = 'vue'
-    } else if (id.endsWith('.scss')) {
-        fileType = 'scss'
-    } else if (id.endsWith('.sass')) {
-        fileType = 'sass'
-    } else if (id.endsWith('.less')) {
-        fileType = 'less'
-    } else if (isCssFile(id)) {
-        fileType = 'css'
-    }
-
-    if (!fileType || !FILE_TYPE_HANDLERS[fileType]) {
-        return { code }
-    }
-
-    const handler = FILE_TYPE_HANDLERS[fileType]
-    const result = await handler(code, id)
-
-    return {
-        code: result.css,
-        map: result.map
-    }
-}
-
-/**
  * 检查指定路径的图片是否属于某个精灵图
- * @param path 图片文件路径
+ * @param path 图片文件绝对路径，D:\xxx\xxx.png
  * @returns 如果是精灵图的一部分，返回精灵图信息；否则返回 false
  */
 export function filterSpriteImg(path: string) {
@@ -215,48 +215,15 @@ export function filterSpriteImg(path: string) {
 
     // 使用索引快速查找
     const spritesDir = spriteImageIndex.get(path)
-    if (spritesDir && originalStyles[spritesDir]) {
+    if (
+        spritesDir &&
+        originalStyles[spritesDir] &&
+        originalStyles[spritesDir].coordinates[path]
+    ) {
         return originalStyles[spritesDir]
     }
 
     return false
-}
-
-/**
- * 处理 Vue 单文件组件中的精灵图替换
- * @param code Vue 文件源码
- * @param id 文件路径
- * @returns 处理后的代码和 sourcemap
- */
-export async function handleVueSprite(code: string, id: string) {
-    const { descriptor } = compilerParse(code)
-    if (!descriptor.styles.length) {
-        return { code, map: null }
-    }
-
-    const ms = new MagicString(code)
-
-    for (const style of descriptor.styles) {
-        const isExtend = EXTEND_CSS[style.lang as ExtendCssType]
-
-        const transformedScss = isExtend
-            ? await handleSpriteExtendCss(
-                  style.content,
-                  id,
-                  style.lang as ExtendCssType
-              )
-            : await handleSpriteCss(style.content, id)
-        ms.overwrite(
-            style.loc.start.offset,
-            style.loc.end.offset,
-            transformedScss.css
-        )
-    }
-
-    return {
-        code: ms.toString(),
-        map: ms.generateMap({ hires: true })
-    }
 }
 
 /**
@@ -277,35 +244,6 @@ export async function handleSpriteCss(css: string, id: string) {
 }
 
 /**
- * 处理 css扩展语言中的精灵图替换
- * @param code 样式源码
- * @param id 文件路径
- * @returns 处理后的 PostCSS 结果
- */
-export async function handleSpriteExtendCss(
-    code: string,
-    id: string,
-    type: ExtendCssType
-) {
-    try {
-        const css = await flattenSelectors(code, type)
-        const parser = type === 'scss' ? postcssScss : postcssLess
-        const res = await postcss([
-            (root: postcss.Root) => {
-                root.walkRules((rule: postcss.Rule) => {
-                    processSpritesBgRule(rule, id)
-                })
-            }
-        ]).process(css, { from: undefined, parser })
-
-        return res
-    } catch (error) {
-        // 降级处理：直接当作 CSS 处理
-        return await handleSpriteCss(code, id)
-    }
-}
-
-/**
  * 更严格的 URL 匹配正则表达式
  */
 const URL_REGEX = /url\s*\(\s*(['"]?)([^"')]+?)\1\s*\)/gi
@@ -314,6 +252,7 @@ const URL_REGEX = /url\s*\(\s*(['"]?)([^"')]+?)\1\s*\)/gi
  * 处理 CSS 规则中的背景图片，替换为精灵图
  * @param rule PostCSS 规则对象
  * @param id 文件路径
+ * @param isBuild 是否为构建模式
  */
 function processSpritesBgRule(rule: Rule, id: string) {
     rule.walkDecls(/background(-image)?$/i, (decl: postcss.Declaration) => {
@@ -339,26 +278,63 @@ function processSpritesBgRule(rule: Rule, id: string) {
         const spriteBase = parse(outPathName).base
         const base = parse(url).base
 
-        const options = getSpritesCssSize(filePath, rule, targetSprite)
-
         decl.value = value.replace(
             new RegExp(escapeRegex(url), 'g'),
             url.replace(base, spriteBase)
         )
 
-        const props = getBgCss(targetSprite, filePath, options).props
-
-        for (const key in props) {
-            if (props[key]) {
-                // 只处理有值的属性
-                rule.walkDecls(key, (existingDecl) => {
-                    existingDecl.remove()
-                    return
-                })
-                rule.append({ prop: key, value: props[key] })
-            }
-        }
+        modifySpritesCss(rule, targetSprite, filePath)
     })
+}
+
+function modifySpritesCss(
+    rule: Rule,
+    styles: SpritesStylesType,
+    filePath: string
+) {
+    const options = getSpritesCssSize(filePath, rule, styles)
+    const { spritesConfig } = getGlobalConfig()
+    const { properties, coordinates } = styles
+
+    const { width, height, x, y } = options || {}
+
+    // 检查坐标信息是否存在
+    const coordInfo = coordinates[filePath]
+    const sw = width || properties.width + 'px'
+    const sh = height || properties.height + 'px'
+    const sx = x !== undefined ? x : coordInfo.x + 'px'
+    const sy = y !== undefined ? y : coordInfo.y + 'px'
+    const getUnit = (str: string) => {
+        return spritesConfig?.transformUnit
+            ? spritesConfig.transformUnit(str, filePath)
+            : str
+    }
+
+    const _width = getUnit(sw)
+
+    const _height = getUnit(sh)
+
+    const _x = getUnit(sx)
+
+    const _y = getUnit(sy)
+
+    const props = {
+        'background-position': `-${_x} -${_y} !important`,
+        'background-size': `${_width} ${_height} !important`,
+        'background-repeat': 'no-repeat !important'
+    }
+
+    for (const key in props) {
+        const val = props[key as keyof typeof props]
+        if (val) {
+            // 只处理有值的属性
+            rule.walkDecls(key, (existingDecl) => {
+                existingDecl.remove()
+                return
+            })
+            rule.append({ prop: key, value: val })
+        }
+    }
 }
 
 /**
@@ -368,94 +344,6 @@ function processSpritesBgRule(rule: Rule, id: string) {
  */
 function escapeRegex(str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-/**
- * 生成精灵图的 CSS 属性
- * @param targetSprite 精灵图信息
- * @param filePath 原始图片路径
- * @param opt 可选的缩放参数
- * @returns CSS 属性对象和字符串
- */
-function getBgCss(
-    targetSprite: SpritesStylesType,
-    filePath: string,
-    opt?: {
-        width?: number
-        height?: number
-        x?: number
-        y?: number
-    }
-): {
-    props: { [key: string]: string }
-    css: string
-} {
-    const { spritesConfig } = getGlobalConfig()
-    const { coordinates, properties } = targetSprite
-    const { width, height, x, y } = opt || {}
-
-    // 检查坐标信息是否存在
-    const coordInfo = coordinates[filePath]
-    if (!coordInfo) {
-        return {
-            props: {},
-            css: ''
-        }
-    }
-
-    const sw = width || properties.width
-    const sh = height || properties.height
-    const sx = x !== undefined ? x : coordInfo.x
-    const sy = y !== undefined ? y : coordInfo.y
-
-    const _width = spritesConfig?.transformUnit
-        ? spritesConfig.transformUnit(`${sw}px`, filePath)
-        : `${sw}px`
-    const _height = spritesConfig?.transformUnit
-        ? spritesConfig.transformUnit(`${sh}px`, filePath)
-        : `${sh}px`
-    const _x = spritesConfig?.transformUnit
-        ? spritesConfig.transformUnit(`${sx}px`, filePath)
-        : `${sx}px`
-    const _y = spritesConfig?.transformUnit
-        ? spritesConfig.transformUnit(`${sy}px`, filePath)
-        : `${sy}px`
-
-    return {
-        props: {
-            'background-position': `-${_x} -${_y} !important`,
-            'background-size': `${_width} ${_height} !important`,
-            'background-repeat': 'no-repeat !important'
-        },
-        css: `background-position: -${_x} -${_y} !important;
-    background-size: ${_width} ${_height} !important;
-    background-repeat: no-repeat !important;`
-    }
-}
-
-/**
- * 拍平 样式 嵌套选择器结构
- * @param code 样式 源码
- * @returns 拍平后的 CSS
- */
-export async function flattenSelectors(
-    code: string,
-    type: ExtendCssType
-): Promise<string> {
-    try {
-        const parser =
-            type === 'scss' || type === 'sass' ? postcssScss : postcssLess
-
-        const result = await postcss([postcssNested()]).process(code, {
-            parser,
-            from: undefined
-        })
-
-        return result.css
-    } catch (error) {
-        console.warn(type + '样式拍平处理失败，返回原始代码:', error)
-        return code
-    }
 }
 
 /**
@@ -472,7 +360,7 @@ function resolveImagePath(url: string, id: string): string {
         // 获取配置中的别名路径或默认使用 src
         const { spritesConfig } = getGlobalConfig()
         // 使用类型断言或提供默认值
-        const aliasPath = (spritesConfig as any)?.aliasPath || 'src'
+        const aliasPath = spritesConfig?.aliasPath || 'src'
         return resolve(cwd(), aliasPath, cleanUrl.slice(2))
     } else if (cleanUrl.startsWith('/')) {
         return resolve(cwd(), cleanUrl.slice(1))
@@ -488,34 +376,69 @@ function getSpritesCssSize(
     targetSprite: SpritesStylesType
 ) {
     const opt = targetSprite.coordinates[filePath]
-    const { properties } = targetSprite
+    const { properties, coordinates } = targetSprite
     const dir = spriteImageIndex.get(filePath) || ''
     const { scale: configScale } =
         findRule(dir.replace(cwd(), '.').replace(/\\/g, '/')) || {}
     let scale = 1
-
-    if (configScale) {
-        scale = configScale
-    } else {
-        const { width, height } = getOriginalCssSize(rule)
-
-        if (width && height) {
-            const _width = parseFloat(width)
-            const _height = parseFloat(height)
-            if (opt && !width.includes('%') && !height.includes('%')) {
-                const scaleX = _width / opt.width
-                const scaleY = _height / opt.height
-                scale = Math.min(scaleX, scaleY)
-            }
+    const { spritesConfig } = getGlobalConfig()
+    const rootValue = (spritesConfig && spritesConfig.rootValue) || 1
+    const specialUnit = ['%', 'vw', 'vh', 'em']
+    const checkSpecialUnit = (unit: string | undefined) => {
+        if (unit === undefined) {
+            return false
         }
+        return specialUnit.some((u) => unit.includes(u))
+    }
+    const handleCssUnit = (unit: string) => {
+        /**
+         * px：直接转
+         * rem：根据传入的rootValue转换
+         */
+        if (unit.endsWith('rem')) {
+            const num = parseFloat(unit)
+            return num * rootValue + 'px'
+        }
+        return unit
+    }
+    const getRealScale = () => {
+        if (!opt) {
+            return 1
+        }
+        const { width, height } = getOriginalCssSize(rule)
+        const _width = width ? handleCssUnit(width) : opt.width + 'px'
+        const _height = height ? handleCssUnit(height) : opt.height + 'px'
+        let scaleX = 1
+        let scaleY = 1
+        if (!checkSpecialUnit(_width)) {
+            scaleX = parseFloat(_width) / opt.width
+        }
+
+        if (!checkSpecialUnit(_height)) {
+            scaleY = parseFloat(_height) / opt.height
+        }
+        return Math.min(scaleX, scaleY)
     }
 
-    return {
+    scale = configScale || getRealScale()
+
+    const result: AnyObject = {
         width: properties.width * scale,
         height: properties.height * scale,
         x: opt.x * scale,
-        y: opt.y * scale
+        y: opt.y * scale,
+        scale
     }
+
+    // 转rem单位
+    Object.keys(result).forEach((key) => {
+        const val = result[key]
+        if (val && typeof val === 'number' && key !== 'scale') {
+            result[key] = val / rootValue + 'rem'
+        }
+    })
+
+    return result
 }
 
 /**
@@ -561,4 +484,96 @@ function checkSpriteConfig() {
         spritesConfig.rules &&
         spritesConfig.rules.length > 0
     )
+}
+
+/**
+ * 初始化bundle中的精灵图信息
+ * @param bundle
+ */
+export async function initBundleStyles(bundle: any) {
+    for (const key in bundle) {
+        const { ext } = parse(key)
+        if (IMG_FORMATS_ENUM[ext.replace('.', '') as ImgFormatType]) {
+            const { fileName, originalFileNames } = bundle[key]
+            const absolutePath = join(cwd(), originalFileNames[0]).replace(
+                /\//,
+                '\\'
+            )
+            //   查找对应的精灵图信息配置
+            const targetSprite = filterSpriteImg(absolutePath)
+            if (!targetSprite) {
+                continue
+            }
+            bundleStyles.set(parse(fileName).base, {
+                styles: targetSprite,
+                absolutePath
+            })
+            //  删除单个图片bundle
+            delete bundle[key]
+        }
+    }
+}
+
+export async function handleSpritesCssBundle(that: PluginContext, bundle: any) {
+    for (const key in bundle) {
+        if (isCssFile(key)) {
+            const css = bundle[key].source || ''
+            const res = await postcss([
+                (root: postcss.Root) => {
+                    root.walkRules((rule: postcss.Rule) => {
+                        rule.walkDecls(
+                            /background(-image)?$/i,
+                            (decl: postcss.Declaration) => {
+                                const { value } = decl
+
+                                URL_REGEX.lastIndex = 0
+                                const imageMatch = URL_REGEX.exec(value)
+
+                                if (!imageMatch || !imageMatch[2]) return
+
+                                const url = imageMatch[2].trim()
+                                const base64 = isBase64(url)
+                                const stylesKey = base64 ? url : parse(url).base
+
+                                // 检查是否为精灵图中的图片
+                                if (!bundleStyles.has(stylesKey)) return
+
+                                const { styles: targetSprite, absolutePath } =
+                                    bundleStyles.get(stylesKey)!
+
+                                const { referenceId } = targetSprite
+                                const spritesAssetsPath = that.getFileName(
+                                    referenceId || ''
+                                )
+
+                                const spriteBase = parse(spritesAssetsPath).base
+
+                                // 替换css的图片路径，更换成精灵图
+                                decl.value = value.replace(
+                                    new RegExp(escapeRegex(url), 'g'),
+                                    base64
+                                        ? getRelativeAssetPath(
+                                              key,
+                                              spritesAssetsPath
+                                          )
+                                        : url.replace(
+                                              parse(url).base,
+                                              spriteBase
+                                          )
+                                )
+
+                                modifySpritesCss(
+                                    rule,
+                                    targetSprite,
+                                    absolutePath
+                                )
+                            }
+                        )
+                    })
+                }
+            ]).process(css, { from: undefined })
+
+            bundle[key].source = res.css
+        }
+    }
 }

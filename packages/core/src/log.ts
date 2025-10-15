@@ -62,16 +62,16 @@ export function printLog() {
         name += '   '
         const origin = pc.bold(formatFileSize(originSize))
         const compress = pc.bold(formatFileSize(compressSize))
-        const rate = pc.green(
-            roundTo(((originSize - compressSize) / originSize) * 100, 2) + '%↓'
-        )
+        const rate = roundTo(((originSize - compressSize) / originSize) * 100, 2)
+
         console.log(
-            `${pc.cyan(name)} ${origin} ---> ${compress} | ${pc.yellow('rate:')} ${rate}`
+            `${pc.cyan(name)} ${origin} ---> ${compress} | ${pc.yellow('rate:')} ${rate > 0 ? pc.green(rate + '%↓') : pc.red(Math.abs(rate) + '%↑')}`
         )
     })
+    const totalRate= roundTo(((totalSize - compressedSize) / totalSize) * 100, 2)
     console.log(
         pc.bold(
-            `total images size: ${pc.bold(formatFileSize(totalSize))} ---> ${pc.bold(formatFileSize(compressedSize))} | ${pc.green(`${roundTo(((totalSize - compressedSize) / totalSize) * 100, 2)}%↓`)}`
+            `compress images total size: ${pc.bold(formatFileSize(totalSize))} ---> ${pc.bold(formatFileSize(compressedSize))} | ${totalRate > 0 ? pc.green(totalRate + '%↓') : pc.red(Math.abs(totalRate) + '%↑')}`
         )
     )
     console.log(

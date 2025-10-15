@@ -94,6 +94,7 @@ export type PluginOptions = {
             | 'diagonal'
             | 'alt-diagonal'
             | 'binary-tree'
+        aliasPath?: string
         /**
          * 单位转换
          * @param unit 单位px
@@ -101,6 +102,10 @@ export type PluginOptions = {
          * @returns
          */
         transformUnit?: (unit: string, filePath: string) => string
+        /**
+         * rootValue，rem的转换单位
+         */
+        rootValue?: number
     }
 }
 
@@ -123,5 +128,7 @@ export interface SpritesStylesType {
         width: number
         height: number
     }
+    image?: Buffer
     outPathName: string
+    referenceId?: string
 }
