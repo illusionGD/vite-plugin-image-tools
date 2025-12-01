@@ -7,18 +7,19 @@ import { DEFAULT_CONFIG } from './constants'
 import sharp from 'sharp'
 import { pressBufferToImage } from './compress'
 import { logSize } from './log'
+import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
 
 const imgWebpMap: { [key: string]: string } = {}
 const globalConfig: PluginOptions = JSON.parse(JSON.stringify(DEFAULT_CONFIG))
-/** 压缩图片缓存 */
+/** Compressed image cache */
 export const compressCache: { [key: string]: Buffer } = {}
 
-/** 获取全局配置 */
+/** Get global configuration */
 export function getGlobalConfig() {
   return globalConfig
 }
 
-/** 设置全局配置 */
+/** Set global configuration */
 export function setGlobalConfig(config: Partial<PluginOptions>) {
   Object.assign(globalConfig, DEFAULT_CONFIG, config)
   globalConfig.spritesConfig = Object.assign(
@@ -28,17 +29,17 @@ export function setGlobalConfig(config: Partial<PluginOptions>) {
   )
 }
 
-/** 添加WebpMap项 */
+/** Add WebpMap item */
 export function addImgWebpMap(name: string) {
   imgWebpMap[name] = replaceWebpExt(name)
 }
 
-/** 获取webpMap对象 */
+/** Get webpMap object */
 export function getImgWebpMap() {
   return imgWebpMap
 }
 
-/** 处理收集要转webp的图片Map */
+/** Handle map of images to be converted to webp */
 export async function handleWebpImgMap(bundle: any) {
   const { webpConfig } = getGlobalConfig()
   for (const key in bundle) {
@@ -57,7 +58,16 @@ export async function handleWebpImgMap(bundle: any) {
 
     const { source, originalFileNames } = chunk
 
-    // webp打包过滤
+    // Limit webp size
+    if (
+      webpConfig?.limitSize &&
+      source &&
+      source.length <= webpConfig?.limitSize
+    ) {
+      continue
+    }
+
+    // Webp filter function
     if (webpConfig && webpConfig.filter) {
       const { filter } = webpConfig
       let buildWebp = false
@@ -83,13 +93,13 @@ export async function handleWebpImgMap(bundle: any) {
     if (source) {
       const metadata = await sharp(source).metadata()
       const { width, height } = metadata
-      // webp最大分辨率不能超过16383*16383，否则会报错
+      // WebP maximum resolution cannot exceed 16383 * 16383, otherwise an error will be thrown
       if (width && height && (width > 16383 || height > 16383)) {
         continue
       }
     }
 
-    // 转换前后大小
+    // File size before and after conversion
     const { sharpConfig } = getGlobalConfig()
     const webpBuffer = await pressBufferToImage(
       chunk.source,
@@ -97,7 +107,7 @@ export async function handleWebpImgMap(bundle: any) {
       sharpConfig[IMG_FORMATS_ENUM.webp]
     )
 
-    // 如果转换webp体积更大则不转
+    // Skip conversion if WebP file size is larger than original
     if (webpBuffer.length >= source.length) {
       continue
     }
@@ -107,14 +117,14 @@ export async function handleWebpImgMap(bundle: any) {
       originSize: source.length,
       compressSize: webpBuffer.length
     })
-    compressCache[chunk.fileName] = webpBuffer
+    compressCache[replaceWebpExt(key)] = webpBuffer
 
-    // 收集要转webp的图片
+    // Collect images to be converted to WebP
     addImgWebpMap(base)
   }
 }
 
-/** 过滤chunk中的img项 */
+/** Filter image items in chunk */
 export async function filterChunkImage(chunk: any) {
   if (!chunk.originalFileNames || !chunk.originalFileNames.length) {
     return chunk.fileName ? false : await filterImage(chunk.fileName)
@@ -136,7 +146,7 @@ export function handleReplaceWebp(str: string) {
   return temp
 }
 
-/** 获取缓存key */
+/** Get cache key */
 export function getCacheKey({ name, type, content }: any, factor: AnyObject) {
   const hash = crypto
     .createHash('md5')
@@ -146,26 +156,35 @@ export function getCacheKey({ name, type, content }: any, factor: AnyObject) {
   return `${name}_${hash.slice(0, 8)}.${type}`
 }
 
-/** 过滤图片 */
+/** Filter images */
 export async function filterImage(filePath: string) {
   if (!filePath) {
     return false
   }
   const { ext } = parse(filePath)
-  const { includes, excludes } = getGlobalConfig()
+  const { includes, excludes, limitSize, isBuild } = getGlobalConfig()
   const format = ext.replace('.', '') as ImgFormatType
 
-  // 过滤图片格式
+  // Filter image formats
   if (!IMG_FORMATS_ENUM[format]) {
     return false
   }
 
-  // 不处理base64图片
+  // Size limit
+  if (limitSize) {
+    const _path = isBuild ? filePath : join(cwd(), filePath)
+    const buffer = readFileSync(_path)
+    if (buffer && buffer.length <= limitSize) {
+      return false
+    }
+  }
+
+  // Skip base64 images
   if (isBase64(filePath)) {
     return false
   }
 
-  // excludes排除配置
+  // Exclude configuration
   if (excludes) {
     if (typeof excludes === 'string') {
       if (filePath.includes(excludes)) {
@@ -176,7 +195,7 @@ export async function filterImage(filePath: string) {
     }
   }
 
-  // includes包含配置
+  // Include configuration
   if (includes) {
     if (typeof includes === 'string') {
       if (!filePath.includes(includes)) {
@@ -192,7 +211,7 @@ export async function filterImage(filePath: string) {
   return await handleFilterPath(filePath)
 }
 
-/** 替换成webp后缀 */
+/** Replace with webp extension */
 export function replaceWebpExt(url: string) {
   if (isBase64(url)) {
     return url
@@ -204,7 +223,7 @@ export function replaceWebpExt(url: string) {
   return query ? `${newPath}?${query}` : newPath
 }
 
-/** 处理用户的filter函数，过滤图片path */
+/** Handle user's filter function to filter image paths */
 export async function handleFilterPath(path: string) {
   const { filter } = getGlobalConfig()
   if (filter && filter instanceof Function) {
@@ -217,17 +236,17 @@ export async function handleFilterPath(path: string) {
   return true
 }
 
-/** 是否为async函数 */
+/** Check if function is async */
 export function isAsyncFunction(fn: Function) {
   return Object.prototype.toString.call(fn) === '[object AsyncFunction]'
 }
 
-/** 是否为base64 */
+/** Check if string is base64 */
 export function isBase64(url: string) {
   return url.startsWith('data:image/') && url.includes(';base64,')
 }
 
-/** 校验配置 */
+/** Validate pattern */
 export function checkPattern(pattern: string | RegExp, str: string) {
   if (typeof pattern === 'string') {
     if (!str.includes(pattern)) {
@@ -242,7 +261,7 @@ export function checkPattern(pattern: string | RegExp, str: string) {
   return true
 }
 
-/** 是否为css文件 */
+/** Check if file is CSS */
 export function isCssFile(id: string) {
   return (
     id.endsWith('.css') ||
@@ -255,7 +274,7 @@ export function isCssFile(id: string) {
 
 const postfixRE = /[?#].*$/
 
-/** 去除链接中的查询参数等 */
+/** Remove query parameters from URL */
 export function cleanUrl(url: string): string {
   return url.replace(postfixRE, '')
 }
@@ -265,23 +284,77 @@ export function normalizePath(id: string): string {
 }
 
 /**
- * 获取资源之间的相对路径（保证跨平台兼容）
- * @param from 源文件路径（例如 CSS 文件路径）
- * @param to 目标文件路径（例如 图片路径）
- * @returns 相对路径（如 "../zh-Hans-BkG767TM.webp"）
+ * Get relative path between assets (ensuring cross-platform compatibility)
+ * @param from Source file path (e.g., CSS file path)
+ * @param to Target file path (e.g., image path)
+ * @returns Relative path (e.g., "../zh-Hans-BkG767TM.webp")
  */
 export function getRelativeAssetPath(from: string, to: string): string {
-  // 归一化路径
-  const fromDir = path.dirname(from);
-  let relative = path.relative(fromDir, to);
+  // Normalize paths
+  const fromDir = path.dirname(from)
+  let relative = path.relative(fromDir, to)
 
-  // 修正 Windows 路径反斜杠
-  relative = relative.split(path.sep).join('/');
+  // Fix Windows path backslashes
+  relative = relative.split(path.sep).join('/')
 
-  // 确保相对路径不是空（同一目录）
+  // Ensure relative path is not empty (same directory)
   if (!relative.startsWith('.')) {
-    relative = './' + relative;
+    relative = './' + relative
   }
 
-  return relative;
+  return relative
+}
+
+/**
+ * Find file path by name, return path array
+ * @param dirs
+ * @param name
+ */
+export function findImgFileAbsolutePathByName(
+  dirs: string | string[],
+  name: string
+) {
+  const result: string[] = []
+  const dirList = Array.isArray(dirs) ? dirs : [dirs]
+
+  const walk = (dir: string) => {
+    if (!existsSync(dir)) return
+    const files = readdirSync(dir)
+    for (const file of files) {
+      const filePath = path.join(dir, file)
+      const stat = statSync(filePath)
+      if (stat.isDirectory()) {
+        walk(filePath)
+      } else {
+        // Check if filename matches (supports partial matching)
+        if (file.includes(name)) {
+          result.push(path.resolve(filePath))
+        }
+      }
+    }
+  }
+
+  for (const dir of dirList) {
+    // Automatically resolve to absolute path
+    const absDir = path.isAbsolute(dir) ? dir : path.resolve(process.cwd(), dir)
+    walk(absDir)
+  }
+
+  return result
+}
+
+/**
+ * Format file size
+ * @param size File size (in bytes)
+ * @param decimals Decimal places to keep, default 2
+ * @returns Formatted string
+ */
+export function formatFileSize(size: number, decimals: number = 2): string {
+  if (size === 0) return '0 B'
+
+  const k = 1024
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(size) / Math.log(k))
+
+  return parseFloat((size / Math.pow(k, i)).toFixed(decimals)) + ' ' + units[i]
 }

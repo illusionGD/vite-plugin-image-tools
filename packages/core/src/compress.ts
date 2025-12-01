@@ -8,7 +8,8 @@ import {
     filterChunkImage,
     getImgWebpMap,
     isAsyncFunction,
-    compressCache
+    compressCache,
+    filterImage,
 } from './utils'
 import sharp, { type FormatEnum } from 'sharp'
 import { existsSync, readdirSync, readFileSync, writeFile } from 'fs'
@@ -20,8 +21,11 @@ import type {
 } from './types'
 import { transformWebpExtInCss } from './transform'
 import { logSize } from './log'
+import { UserConfig } from 'vite'
+import { cwd } from 'process'
+import { stat } from 'fs/promises'
 
-/** 格式化jpeg后缀 */
+/** Format jpeg extension */
 function formatJPGExt(type: string): ImgFormatType {
     const ext = type.includes('.') ? type.replace('.', '') : type
     return ext === IMG_FORMATS_ENUM.jpg || ext === IMG_FORMATS_ENUM.jpeg
@@ -29,7 +33,7 @@ function formatJPGExt(type: string): ImgFormatType {
         : (ext as ImgFormatType)
 }
 
-/** 压缩图片buffer */
+/** Compress image buffer */
 export async function pressBufferToImage(
     buffer: Buffer,
     type: ImgFormatType,
@@ -39,7 +43,7 @@ export async function pressBufferToImage(
 
     const globalConfig = getGlobalConfig()
     const options = Object.assign({ quality: globalConfig.quality }, opt || {})
-    const {format} = await sharp(buffer).metadata()
+    const { format } = await sharp(buffer).metadata()
     if (options.quality >= 100 && format && format.includes(type)) {
         return buffer
     }
@@ -51,8 +55,8 @@ export async function pressBufferToImage(
 const devNoChangeFiles: string[] = []
 
 /**
- * 处理开发时的图片
- * @param filePath
+ * Process image in development
+ * @param filePath file path
  */
 export async function processImage(filePath: string) {
     const {
@@ -66,7 +70,7 @@ export async function processImage(filePath: string) {
     } = getGlobalConfig()
     const { ext, name } = parse(filePath)
 
-    // 读取不转换记录的文件路径，返回原图数据
+    // Read file path that should not be converted, return original image data
     if (devNoChangeFiles.includes(filePath)) {
         const file = readFileSync(filePath)
         return { buffer: file, type: ext.replace('.', '') }
@@ -86,6 +90,18 @@ export async function processImage(filePath: string) {
                 buildWebp = webpConfig.filter(filePath)
             }
         }
+    }
+
+    // 限制转webp的大小
+    const buffer = readFileSync(filePath)
+    if (
+        enableDevWebp &&
+        buildWebp &&
+        buffer &&
+        webpConfig?.limitSize &&
+        buffer.length <= webpConfig.limitSize
+    ) {
+        return { buffer, type: ext.replace('.', '') }
     }
 
     const type =
@@ -116,8 +132,6 @@ export async function processImage(filePath: string) {
         return { buffer: readFileSync(cachePath), type }
     }
 
-    const buffer = readFileSync(filePath)
-
     const newBuffer = await pressBufferToImage(
         buffer,
         type,
@@ -128,9 +142,9 @@ export async function processImage(filePath: string) {
         return
     }
 
-    // 如果转化压缩后比原体积大，则返回原图数据
+    // If compressed image is larger than original, return original image data
     if (buffer.length < newBuffer.length) {
-        // 缓存路径，避免下次重复打包压缩
+        // Cache path to avoid repeated compression
         devNoChangeFiles.push(filePath)
         return { buffer, type: ext.replace('.', '') }
     }
@@ -140,14 +154,14 @@ export async function processImage(filePath: string) {
     return { buffer: newBuffer, type }
 }
 
-/** 处理图片bundle，压缩&转webp */
+/** Process image bundle, compress & convert to webp */
 export async function handleImgBundle(bundle: any) {
     const webpMap = getImgWebpMap()
 
     for (const key in bundle) {
         const chunk = bundle[key] as any
         const { ext, base } = parse(key)
-        const { enableWebp, sharpConfig, filter, compatibility } =
+        const { enableWebp, sharpConfig, compatibility, webpConfig } =
             getGlobalConfig()
 
         if (/(js|css)$/.test(key) && enableWebp) {
@@ -170,31 +184,33 @@ export async function handleImgBundle(bundle: any) {
 
         const format = ext.replace('.', '') as ImgFormatType
         const isSvg = format === IMG_FORMATS_ENUM.svg
-        // 是否转webp
+        // Whether to convert to webp
         const transformWebp = enableWebp && webpMap[parse(key).base]
+        const originBuffer = chunk.source as any
 
         if (transformWebp) {
             try {
+                const webpName = replaceWebpExt(key)
+                const webpChunk = structuredClone(chunk)
                 const webpBuffer =
-                    compressCache[chunk.fileName] ||
+                    compressCache[webpName] ||
                     (await pressBufferToImage(
-                        chunk.source,
+                        webpChunk.source,
                         IMG_FORMATS_ENUM.webp,
                         sharpConfig[IMG_FORMATS_ENUM.webp]
                     ))
-                const webpName = replaceWebpExt(key)
-                const webpChunk = structuredClone(chunk)
+
                 webpChunk.source = webpBuffer
                 webpChunk.fileName = webpName
                 bundle[webpName] = webpChunk
-                // 缓存
-                compressCache[chunk.fileName] = webpChunk.source
+                // Cache
+                compressCache[webpName] = webpChunk.source
 
-                if (!compressCache[chunk.fileName]) {
+                if (!compressCache[webpName]) {
                     logSize.push({
                         fileName: base,
                         webpName: replaceWebpExt(base),
-                        originSize: chunk.source.length,
+                        originSize: originBuffer.length,
                         compressSize: webpBuffer.length
                     })
                 }
@@ -202,13 +218,17 @@ export async function handleImgBundle(bundle: any) {
                 throw new Error(`Error processing image ${key}: ${error}`)
             }
         }
-        // 如果转webp&不兼容，就去掉原图
-        if (transformWebp && !compatibility) {
+
+        // If converted to webp and not compatible, remove original image
+        const { deleteOriginImg } = webpConfig || {}
+        if (transformWebp && !compatibility && deleteOriginImg) {
             delete bundle[key]
             continue
         }
-        if (chunk.source && chunk.source instanceof Buffer) {
-            // 读缓存
+
+        // Compress original image
+        if (originBuffer && originBuffer instanceof Buffer) {
+            // Read cache
             if (compressCache[chunk.fileName]) {
                 chunk.source = compressCache[chunk.fileName]
                 continue
@@ -216,25 +236,27 @@ export async function handleImgBundle(bundle: any) {
             const pressBuffer = isSvg
                 ? await compressSvg(chunk.source)
                 : await pressBufferToImage(
-                      chunk.source,
+                      originBuffer,
                       format,
                       sharpConfig[format]
                   )
-            // 比对前后压缩大小，如果压缩后更大则不替换
-            if (chunk.source.length > pressBuffer.length) {
+
+            // Compare size before and after compression, do not replace if compressed is larger
+            if (originBuffer.length > pressBuffer.length) {
                 logSize.push({
                     fileName: base,
-                    originSize: chunk.source.length,
+                    originSize: originBuffer.length,
                     compressSize: pressBuffer.length
                 })
                 chunk.source = pressBuffer
-                // 缓存
+
+                // Cache
                 compressCache[chunk.fileName] = chunk.source
             }
         }
     }
 }
-/** 压缩svg图片 */
+/** Compress svg image */
 export async function compressSvg(svg: string) {
     const { svgoConfig } = getGlobalConfig()
     try {
@@ -246,4 +268,79 @@ export async function compressSvg(svg: string) {
         console.error('svg compress failed:', error)
         throw error
     }
+}
+interface PublicImgBundleType {
+    /** Original image path */
+    originPath: string
+    /** Compressed image buffer */
+    buffer: Buffer<ArrayBufferLike>
+}
+
+export async function handlePublicImg(viteConfig: UserConfig) {
+    const publicDir = join(cwd(), viteConfig.publicDir || 'public')
+    // Get images under public directory
+    const bundle: PublicImgBundleType[] = []
+    const { sharpConfig, publicConfig, limitSize } = getGlobalConfig()
+    const collectionBundle = async (dir: string) => {
+        const files = readdirSync(dir)
+        for (let index = 0; index < files.length; index++) {
+            const filePath = join(dir, files[index])
+            const stats = await stat(filePath)
+            if (stats.isDirectory()) {
+                await collectionBundle(filePath)
+            } else {
+                const { ext } = parse(filePath)
+                const isImg = await filterImage(filePath)
+                if (!isImg) {
+                    continue
+                }
+                const buffer = readFileSync(filePath)
+                const limit = publicConfig?.limitSize || limitSize
+                if (limit && buffer.length <= limit) {
+                    continue
+                }
+                const format = ext.replace('.', '') as ImgFormatType
+                const isSvg = format === IMG_FORMATS_ENUM.svg
+                const quality = publicConfig && publicConfig.quality
+
+                if (
+                    quality &&
+                    !isSvg &&
+                    format !== IMG_FORMATS_ENUM.gif &&
+                    sharpConfig[format]
+                ) {
+                    sharpConfig[format].quality = quality
+                }
+
+                const pressBuffer = isSvg
+                    ? await compressSvg(buffer as unknown as string)
+                    : await pressBufferToImage(
+                          buffer,
+                          format,
+                          sharpConfig[format]
+                      )
+                logSize.push({
+                    fileName: files[index],
+                    originSize: buffer.length,
+                    compressSize: pressBuffer.length
+                })
+                bundle.push({
+                    originPath: filePath,
+                    buffer:
+                        pressBuffer.length < buffer.length
+                            ? pressBuffer
+                            : buffer
+                })
+            }
+        }
+    }
+
+    await collectionBundle(publicDir)
+
+    const outDir = join(cwd(), viteConfig.build?.outDir || 'dist')
+    // Output images
+    bundle.forEach(({ originPath, buffer }) => {
+        const outputPath = originPath.replace(publicDir, outDir)
+        writeFile(outputPath, buffer, (err) => {})
+    })
 }

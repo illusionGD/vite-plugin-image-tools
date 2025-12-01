@@ -1,7 +1,7 @@
 import type { ImgFormatType, PluginOptions } from './types'
 import type { AnyObject } from './types'
 
-/** 图片格式enm */
+/** Image format enum */
 export const IMG_FORMATS_ENUM = {
     png: 'png',
     jpg: 'jpg',
@@ -13,7 +13,7 @@ export const IMG_FORMATS_ENUM = {
     svg: 'svg'
 } as const
 
-/** 默认配置 */
+/** Default configuration */
 export const DEFAULT_CONFIG: PluginOptions = {
     quality: 80,
     enableDev: false,
@@ -43,4 +43,4 @@ export const DEFAULT_CONFIG: PluginOptions = {
 }
 
 export const isWindows =
-  typeof process !== 'undefined' && process.platform === 'win32'
+    typeof process !== 'undefined' && process.platform === 'win32'

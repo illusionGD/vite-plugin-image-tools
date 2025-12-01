@@ -7,32 +7,46 @@ import terser from '@rollup/plugin-terser'
 /** @type {import('rollup').RollupOptions[]} */
 
 export default {
-  input: `src/index.ts`,
-  output: [
-    {
-      dir: 'dist',
-      entryFileNames: 'esm/[name].js',
-      format: 'esm',
-      sourcemap: true
-    },
-    {
-        dir: 'dist',
-        entryFileNames: 'cjs/[name].js',
-        format: 'cjs',
-        sourcemap: true
-    }
-  ],
-  plugins: [
-    json(),
-    commonjs(),
-    resolve({
-      preferBuiltins: false
-    }),
-    babel({ babelHelpers: 'bundled' }),
-    typescript({
-      tsconfig: './tsconfig.json'
-    }),
-    terser()
-  ],
-  external: ['fs', 'path', 'crypto', 'sharp','spritesmith','sass']
+    input: `src/index.ts`,
+    output: [
+        {
+            dir: 'dist',
+            entryFileNames: 'esm/[name].js',
+            format: 'esm',
+            sourcemap: true
+        },
+        {
+            dir: 'dist',
+            entryFileNames: 'cjs/[name].js',
+            format: 'cjs',
+            sourcemap: true
+        }
+    ],
+    plugins: [
+        json(),
+        commonjs(),
+        resolve({
+            preferBuiltins: false
+        }),
+        babel({ babelHelpers: 'bundled' }),
+        typescript({
+            tsconfig: './tsconfig.json'
+        }),
+        terser()
+    ],
+    external: [
+        'fs',
+        'path',
+        'crypto',
+        'sharp',
+        'spritesmith',
+        'sass',
+        'postcss',
+        'magic-string',
+        'svgo',
+        'node-html-parser',
+        'picocolors',
+        'process',
+        'fs/promises'
+    ]
 }

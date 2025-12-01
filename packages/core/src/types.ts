@@ -1,112 +1,136 @@
 import type {
-    FormatEnum,
-    WebpOptions,
-    PngOptions,
-    Jp2Options,
-    JpegOptions,
-    JxlOptions,
-    AvifOptions,
-    TiffOptions,
-    GifOptions,
-    OutputOptions
+  FormatEnum,
+  WebpOptions,
+  PngOptions,
+  Jp2Options,
+  JpegOptions,
+  JxlOptions,
+  AvifOptions,
+  TiffOptions,
+  GifOptions,
+  OutputOptions
 } from 'sharp'
 import { type Config as svgoConfig } from 'svgo'
 import { IMG_FORMATS_ENUM } from './constants'
+import { UserConfig } from 'vite'
 
 export type AnyObject = {
-    [key: string | number | symbol]: any
+  [key: string | number | symbol]: any
 }
 
 interface sharpConfigType {
-    jpeg?: JpegOptions
-    jpg?: JpegOptions
-    png?: PngOptions
-    webp?: WebpOptions
-    avif?: AvifOptions
-    tiff?: TiffOptions
-    gif?: GifOptions
+  jpeg?: JpegOptions
+  jpg?: JpegOptions
+  png?: PngOptions
+  webp?: WebpOptions
+  avif?: AvifOptions
+  tiff?: TiffOptions
+  gif?: GifOptions
 }
 
 export type PluginOptions = {
-    /** 压缩质量 */
-    quality: number
-    /** 开发环境是否开启 */
-    enableDev: boolean
-    /** 开发环境是否开启webp */
-    enableDevWebp: boolean
-    /** 打包是否开启webp */
-    enableWebp: boolean
-    /** 包含 */
-    includes: string | RegExp
-    /** 排除 */
-    excludes: string | RegExp
-    /** 开发环境图片缓存路径，默认node_modules/.cache/vite-plugin-image */
-    cacheDir: string
-    /** sharp配置 */
-    sharpConfig: sharpConfigType
-    /** svgo配置 */
-    svgoConfig: svgoConfig
-    compatibility: boolean
-    bodyWebpClassName: string
-    /** 是否打印日志，默认true */
-    log: boolean
+  /** Compression quality */
+  quality: number
+  /** Whether to enable in development environment */
+  enableDev: boolean
+  /** Whether to enable WebP in development environment */
+  enableDevWebp: boolean
+  /** Whether to enable WebP during build */
+  enableWebp: boolean
+  /** Include patterns */
+  includes: string | RegExp
+  /** Exclude patterns */
+  excludes: string | RegExp
+  /** Development environment image cache directory, default: node_modules/.cache/vite-plugin-image */
+  cacheDir: string
+  /** Sharp configuration */
+  sharpConfig: sharpConfigType
+  /** SVGO configuration */
+  svgoConfig: svgoConfig
+  compatibility: boolean
+  bodyWebpClassName: string
+  /** File size limit, files <= this value will not be compressed or converted */
+  limitSize?: number
+  /** Whether to print logs, default: true */
+  log?: boolean
+  /** Whether to print debug logs */
+  debugLog?: boolean
+  /**
+   * Filter function
+   * @param path Image path
+   */
+  filter?: (path: string) => boolean
+  /** Build WebP configuration */
+  webpConfig?: {
     /**
-     * 过滤函数
-     * @param path 图片路径
+     * Filter function
+     * @param path Image path
      */
     filter?: (path: string) => boolean
-    /** 打包webp配置 */
-    webpConfig?: {
-        /**
-         * 过滤函数
-         * @param path 图片路径
-         */
-        filter?: (path: string) => boolean
-    }
-    /** 精灵图配置 */
-    spritesConfig?: {
-        rules: {
-            /** 文件夹 */
-            dir: string
-            /** 后缀，默认sprites */
-            suffix?: string
-            padding?: number
-            /** 压缩质量 */
-            quality?: number
-            /** css缩放 */
-            scale?: number
-            algorithm?:
-                | 'top-down'
-                | 'left-right'
-                | 'diagonal'
-                | 'alt-diagonal'
-                | 'binary-tree'
-        }[]
-        /** 包含 */
-        includes?: string | RegExp
-        /** 排除 */
-        excludes?: string | RegExp
-        /** 后缀，默认sprites */
-        suffix?: string
-        algorithm?:
-            | 'top-down'
-            | 'left-right'
-            | 'diagonal'
-            | 'alt-diagonal'
-            | 'binary-tree'
-        aliasPath?: string
-        /**
-         * 单位转换
-         * @param unit 单位px
-         * @param filePath 单张图片的路径
-         * @returns
-         */
-        transformUnit?: (unit: string, filePath: string) => string
-        /**
-         * rootValue，rem的转换单位
-         */
-        rootValue?: number
-    }
+    /** Whether to delete original image */
+    deleteOriginImg?: boolean
+    /** File size limit, files <= this value will not be compressed or converted */
+    limitSize?: number
+  }
+  /** Sprite image configuration */
+  spritesConfig?: {
+    rules: {
+      /** Directory */
+      dir: string
+      /** Output directory */
+      outputDir?: string
+      /** Suffix, default: sprites */
+      suffix?: string
+      padding?: number
+      /** CSS scaling */
+      scale?: number
+      algorithm?:
+        | 'top-down'
+        | 'left-right'
+        | 'diagonal'
+        | 'alt-diagonal'
+        | 'binary-tree'
+    }[]
+    /** Output directory */
+    outputDir?: string
+    /** Include patterns */
+    includes?: string | RegExp
+    /** Exclude patterns */
+    excludes?: string | RegExp
+    /** Suffix, default: sprites */
+    suffix?: string
+    algorithm?:
+      | 'top-down'
+      | 'left-right'
+      | 'diagonal'
+      | 'alt-diagonal'
+      | 'binary-tree'
+    aliasPath?: string
+    /**
+     * Unit conversion
+     * @param unit unit
+     * @param filePath single image path
+     */
+    transformUnit?: (unit: number, filePath: string) => string
+    /**
+     * Root value, conversion unit for rem
+     */
+    rootValue?: number
+    /** Whether to delete original images */
+    deleteOriginImg?: boolean
+  }
+  /** Public image configuration */
+  publicConfig?: {
+    enable?: boolean
+    /** Compression quality */
+    quality?: number
+    /** File size limit, files <= this value will not be compressed or converted */
+    limitSize?: number
+  }
+  /** Image assets directory, compatible with vite@4.x version not finding original image paths */
+  imgAssetsDir?: string | string[]
+  viteConfig?: UserConfig
+  isBuild?: boolean
 }
 
 export type ImgFormatType = keyof typeof IMG_FORMATS_ENUM
@@ -116,19 +140,20 @@ export type SharpImgFormatType = Exclude<ImgFormatType, 'svg'>
 export type SharpOptionsType = sharpConfigType[keyof sharpConfigType]
 
 export interface SpritesStylesType {
-    coordinates: {
-        [key: string]: {
-            x: number
-            y: number
-            width: number
-            height: number
-        }
+  coordinates: {
+    [key: string]: {
+      x: number
+      y: number
+      width: number
+      height: number
     }
-    properties: {
-        width: number
-        height: number
-    }
-    image?: Buffer
-    outPathName: string
-    referenceId?: string
+  }
+  properties: {
+    width: number
+    height: number
+  }
+  image?: Buffer
+  outPathName: string
+  outputDir?: string
+  referenceId?: string
 }

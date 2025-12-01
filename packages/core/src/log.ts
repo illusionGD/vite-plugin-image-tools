@@ -1,4 +1,5 @@
 import pc from 'picocolors'
+import { formatFileSize } from './utils'
 
 interface LogSizeType {
     fileName: string
@@ -9,24 +10,6 @@ interface LogSizeType {
 }
 
 export const logSize: LogSizeType[] = []
-
-/**
- * 格式化文件大小
- * @param size 文件大小（字节数）
- * @param decimals 保留小数位数，默认 2
- * @returns 格式化后的字符串
- */
-function formatFileSize(size: number, decimals: number = 2): string {
-    if (size === 0) return '0 B'
-
-    const k = 1024
-    const units = ['B', 'KB', 'MB', 'GB', 'TB']
-    const i = Math.floor(Math.log(size) / Math.log(k))
-
-    return (
-        parseFloat((size / Math.pow(k, i)).toFixed(decimals)) + ' ' + units[i]
-    )
-}
 
 function roundTo(num: number, decimals: number): number {
     const factor = Math.pow(10, decimals)
@@ -62,13 +45,19 @@ export function printLog() {
         name += '   '
         const origin = pc.bold(formatFileSize(originSize))
         const compress = pc.bold(formatFileSize(compressSize))
-        const rate = roundTo(((originSize - compressSize) / originSize) * 100, 2)
+        const rate = roundTo(
+            ((originSize - compressSize) / originSize) * 100,
+            2
+        )
 
         console.log(
-            `${pc.cyan(name)} ${origin} ---> ${compress} | ${pc.yellow('rate:')} ${rate > 0 ? pc.green(rate + '%↓') : pc.red(Math.abs(rate) + '%↑')}`
+            `${pc.cyan(name)} ${origin} ---> ${compress} | ${pc.yellow('rate:')} ${rate > 0 ? pc.green(rate + '%↓') : pc.red(Math.abs(rate) + '%↑')}` // Compression rate
         )
     })
-    const totalRate= roundTo(((totalSize - compressedSize) / totalSize) * 100, 2)
+    const totalRate = roundTo(
+        ((totalSize - compressedSize) / totalSize) * 100,
+        2
+    )
     console.log(
         pc.bold(
             `compress images total size: ${pc.bold(formatFileSize(totalSize))} ---> ${pc.bold(formatFileSize(compressedSize))} | ${totalRate > 0 ? pc.green(totalRate + '%↓') : pc.red(Math.abs(totalRate) + '%↑')}`

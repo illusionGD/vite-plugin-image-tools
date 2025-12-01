@@ -7,7 +7,7 @@ interface BackgroundImageSelector {
     imageUrl: string
     value: string
 }
-/** 获取有背景图的css选择器 */
+/** Get CSS selectors with background images */
 export async function extractBackgroundImageSelectors(
     css: string
 ): Promise<BackgroundImageSelector[]> {
@@ -40,7 +40,7 @@ export async function extractBackgroundImageSelectors(
     return backgroundImageSelectors
 }
 
-/** 替换css中的图片后缀为webp */
+/** Replace image extension in CSS to webp */
 export async function transformWebpExtInCss(css: string) {
     const { bodyWebpClassName } = getGlobalConfig()
     const imgMap = getImgWebpMap()
@@ -65,7 +65,7 @@ export async function transformWebpExtInCss(css: string) {
     return css + webpCss
 }
 
-/** 替换Html中的图片后缀为webp */
+/** Replace image extension in HTML to webp */
 export async function transformWebpExtInHtml(html: string) {
     const { bodyWebpClassName } = getGlobalConfig()
     const doc = parseHtml(html)
