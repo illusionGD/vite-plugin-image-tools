@@ -1,6 +1,4 @@
-<script setup>
-import img from './assets/import.jpg'
-</script>
+
 
 <template>
   <div>
@@ -13,9 +11,7 @@ import img from './assets/import.jpg'
       target="_blank"
       class="twitter-share-button"
       href="https://twitter.com/intent/tweet?text=Hello%20world&url=https://mc-carnival.kurogames-global.com/"
-    >
-      Tweet</a
-    >
+    >Tweet</a>
     <!-- <img src="./assets/image.png" alt=""> -->
     <div class="test-css-img">
       <div class="img-test"></div>
@@ -23,8 +19,15 @@ import img from './assets/import.jpg'
     <img :src="img" />
   </div>
 </template>
-
+<script setup>
+import img from './assets/import.jpg'
+console.log("🚀 ~ img:", img)
+</script>
 <style scoped lang="scss">
+// @use '@/assets/mixin.scss';
+
+$color: #fff;
+
 .base64-img {
   width: 40px;
   height: 40px;
@@ -37,7 +40,7 @@ import img from './assets/import.jpg'
   transition: filter 300ms;
 }
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: drop-shadow(0 0 2em $color);
 }
 .logo.vue:hover {
   filter: drop-shadow(0 0 2em #42b883aa);
@@ -65,5 +68,11 @@ import img from './assets/import.jpg'
   &:hover {
     background-image: url('./assets/icons/2.png');
   }
+
+  @for $i from 2 through 3 {
+        &:nth-child(#{$i}) {
+            background-image: url('./assets/icons/3.png');
+        }
+    }
 }
 </style>

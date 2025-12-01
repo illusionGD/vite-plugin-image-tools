@@ -14,6 +14,9 @@ importers:
       '@changesets/cli':
         specifier: ^2.28.1
         version: 2.28.1
+      postcss-less:
+        specifier: ^6.0.0
+        version: 6.0.0(postcss@8.5.3)
       spritesmith:
         specifier: ^3.5.1
         version: 3.5.1
@@ -24,6 +27,9 @@ importers:
       '@types/node':
         specifier: ^22.13.9
         version: 22.13.9
+      '@types/postcss-less':
+        specifier: ^4.0.6
+        version: 4.0.6
       '@types/spritesmith':
         specifier: ^3.4.5
         version: 3.4.5
@@ -63,9 +69,30 @@ importers:
 
   packages/core:
     dependencies:
+      magic-string:
+        specifier: ^0.30.17
+        version: 0.30.17
+      node-html-parser:
+        specifier: ^7.0.1
+        version: 7.0.1
+      picocolors:
+        specifier: ^1.1.1
+        version: 1.1.1
+      postcss:
+        specifier: ^8.5.3
+        version: 8.5.3
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
+      sass:
+        specifier: ^1.86.0
+        version: 1.86.0
       sharp:
         specifier: ^0.33.5
         version: 0.33.5
+      spritesmith:
+        specifier: ^3.5.1
+        version: 3.5.1
       svgo:
         specifier: ^3.3.2
         version: 3.3.2
@@ -100,21 +127,6 @@ importers:
       '@vue/compiler-sfc':
         specifier: ^3.5.16
         version: 3.5.16
-      magic-string:
-        specifier: ^0.30.17
-        version: 0.30.17
-      node-html-parser:
-        specifier: ^7.0.1
-        version: 7.0.1
-      postcss:
-        specifier: ^8.5.3
-        version: 8.5.3
-      rimraf:
-        specifier: ^6.0.1
-        version: 6.0.1
-      spritesmith:
-        specifier: ^3.5.1
-        version: 3.5.1
 
   packages/example:
     dependencies:
@@ -995,6 +1007,9 @@ packages:
 
   '@types/node@22.13.9':
     resolution: {integrity: sha512-acBjXdRJ3A6Pb3tqnw9HZmyR3Fiol3aGxRCK1x3d+6CDAMjl7I649wpSd+yNURCjbOUGu9tqtLKnTGxmK6CyGw==}
+
+  '@types/postcss-less@4.0.6':
+    resolution: {integrity: sha512-xBd7riBa5XEyty+SMMJS0kKdVw+ykN5hjbIuoPLAXDv9JoPS8pRZUriypZiQXKDL7085aegxLbtyo9krBpQzng==}
 
   '@types/resolve@1.20.2':
     resolution: {integrity: sha512-60BCwRFOZCQhDncwQdxxeOEEkbc5dIMccYLwbxsS4TUNeVECQ/pBJ0j09mrHOl/JJvpRPGwO9SvE4nR2Nb/a4Q==}
@@ -2391,6 +2406,12 @@ packages:
     resolution: {integrity: sha512-NCrCHhWmnQklfH4MtJMRjZ2a8c80qXeMlQMv2uVp9ISJMTt562SbGd6n2oq0PaPgKm7Z6pL9E2UlLIhC+SHL3w==}
     engines: {node: '>=4.0.0'}
 
+  postcss-less@6.0.0:
+    resolution: {integrity: sha512-FPX16mQLyEjLzEuuJtxA8X3ejDLNGGEG503d2YGZR5Ask1SpDN8KmZUMpzCvyalWRywAn1n1VOA5dcqfCLo5rg==}
+    engines: {node: '>=12'}
+    peerDependencies:
+      postcss: ^8.3.5
+
   postcss-nested@7.0.2:
     resolution: {integrity: sha512-5osppouFc0VR9/VYzYxO03VaDa3e8F23Kfd6/9qcZTUI8P58GIYlArOET2Wq0ywSl2o2PjELhYOFI4W7l5QHKw==}
     engines: {node: '>=18.0'}
@@ -3755,6 +3776,10 @@ snapshots:
   '@types/node@22.13.9':
     dependencies:
       undici-types: 6.20.0
+
+  '@types/postcss-less@4.0.6':
+    dependencies:
+      postcss: 8.5.3
 
   '@types/resolve@1.20.2': {}
 
@@ -5210,6 +5235,10 @@ snapshots:
   pngjs-nozlib@1.0.0: {}
 
   pngjs@3.4.0: {}
+
+  postcss-less@6.0.0(postcss@8.5.3):
+    dependencies:
+      postcss: 8.5.3
 
   postcss-nested@7.0.2(postcss@8.5.3):
     dependencies:

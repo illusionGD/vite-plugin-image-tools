@@ -1,5 +1,7 @@
-import type { PluginOptions } from './types'
+import type { ImgFormatType, PluginOptions } from './types'
+import type { AnyObject } from './types'
 
+/** Image format enum */
 export const IMG_FORMATS_ENUM = {
     png: 'png',
     jpg: 'jpg',
@@ -11,6 +13,7 @@ export const IMG_FORMATS_ENUM = {
     svg: 'svg'
 } as const
 
+/** Default configuration */
 export const DEFAULT_CONFIG: PluginOptions = {
     quality: 80,
     enableDev: false,
@@ -20,6 +23,7 @@ export const DEFAULT_CONFIG: PluginOptions = {
     excludes: '',
     cacheDir: 'node_modules/.cache/vite-plugin-image',
     sharpConfig: {},
+    log: true,
     svgoConfig: {
         plugins: [
             'preset-default',
@@ -37,3 +41,6 @@ export const DEFAULT_CONFIG: PluginOptions = {
         algorithm: 'binary-tree'
     }
 }
+
+export const isWindows =
+    typeof process !== 'undefined' && process.platform === 'win32'

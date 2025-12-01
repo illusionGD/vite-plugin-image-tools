@@ -7,6 +7,7 @@ interface BackgroundImageSelector {
     imageUrl: string
     value: string
 }
+/** Get CSS selectors with background images */
 export async function extractBackgroundImageSelectors(
     css: string
 ): Promise<BackgroundImageSelector[]> {
@@ -39,6 +40,7 @@ export async function extractBackgroundImageSelectors(
     return backgroundImageSelectors
 }
 
+/** Replace image extension in CSS to webp */
 export async function transformWebpExtInCss(css: string) {
     const { bodyWebpClassName } = getGlobalConfig()
     const imgMap = getImgWebpMap()
@@ -63,6 +65,7 @@ export async function transformWebpExtInCss(css: string) {
     return css + webpCss
 }
 
+/** Replace image extension in HTML to webp */
 export async function transformWebpExtInHtml(html: string) {
     const { bodyWebpClassName } = getGlobalConfig()
     const doc = parseHtml(html)

@@ -1,21 +1,30 @@
-import type { PluginOption, ResolvedConfig } from 'vite'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+// vite-plugin-image-compress.ts
+import type { PluginOption, UserConfig } from 'vite'
+import { existsSync, mkdirSync, writeFileSync } from 'fs'
 import path, { join, parse } from 'path'
-import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from './constants'
-import { processImage, handleImgBundle } from './compress'
+import { processImage, handleImgBundle, handlePublicImg } from './compress'
 import {
     filterImage,
     setGlobalConfig,
     handleWebpImgMap,
     getGlobalConfig,
-    handleReplaceWebp
+    handleReplaceWebp,
+    compressCache,
+    isCssFile
 } from './utils'
 import type { PluginOptions } from './types'
 import { transformWebpExtInHtml } from './transform'
-import { handleSprites, initSprite } from './sprites'
+import {
+    handleSpriteCss,
+    handleSpritesCssBundle,
+    initBundleStyles,
+    initOriginalFileNames,
+    initSprite
+} from './sprites'
+import { printLog } from './log'
 
-export default function VitePluginImageTools(
-    options: Partial<PluginOptions> = {}
+export default function ImageTools(
+    options: Partial<Omit<PluginOptions, 'viteConfig' | 'isBuild'>> = {}
 ): PluginOption {
     setGlobalConfig(options)
 
@@ -23,6 +32,7 @@ export default function VitePluginImageTools(
         getGlobalConfig()
 
     let isBuild = false
+    let viteConfig: UserConfig
     const cachePath = path.resolve(process.cwd(), cacheDir)
 
     if (!existsSync(cachePath)) {
@@ -30,32 +40,35 @@ export default function VitePluginImageTools(
     }
     return {
         name: 'vite-plugin-image-tools',
-        enforce: 'pre',
+
+        config(config, { command }) {
+            viteConfig = config
+            isBuild = command === 'build'
+            const globalConfig = getGlobalConfig()
+            globalConfig.viteConfig = viteConfig
+            globalConfig.isBuild = isBuild
+        },
 
         async buildStart() {
             try {
-                await initSprite()
+                await initSprite(this, viteConfig, isBuild)
             } catch (error) {
-                console.error('❌ [DEBUG] 精灵图初始化失败:', error)
-                // 不阻断构建流程，只是警告
+                console.error('❌ [DEBUG] Sprite initialization failed:', error)
             }
         },
 
-        config(config, { command }) {
-            isBuild = command === 'build'
-        },
         async transform(code: string, id: string) {
-            if (id.includes('node_modules') || id.startsWith('\0')) return
-
-            const result = await handleSprites(code, id)
-            if (result && result.code !== code) {
-                return {
-                    code: result.code
-                }
-            }
+            if (
+                isBuild ||
+                id.includes('node_modules') ||
+                id.startsWith('\0') ||
+                !isCssFile(id)
+            )
+                return
+            const result = await handleSpriteCss(code, id, viteConfig)
 
             return {
-                code
+                code: result && result.css !== code ? result.css : code
             }
         },
         configureServer(server) {
@@ -126,7 +139,9 @@ export default function VitePluginImageTools(
         },
         async generateBundle(_options, bundle) {
             if (!isBuild) return
-
+            await initOriginalFileNames(bundle, viteConfig)
+            await initBundleStyles(bundle)
+            await handleSpritesCssBundle(this, bundle)
             if (enableWebp) {
                 await handleWebpImgMap(bundle)
             }
@@ -134,7 +149,14 @@ export default function VitePluginImageTools(
             await handleImgBundle(bundle)
         },
         async writeBundle(opt, bundle) {
-            const { enableWebp, compatibility } = getGlobalConfig()
+            const { enableWebp, compatibility, log, publicConfig } =
+                getGlobalConfig()
+            if (publicConfig && publicConfig.enable) {
+                await handlePublicImg(viteConfig)
+            }
+            if (log) {
+                printLog()
+            }
             if (!enableWebp) {
                 return
             }
