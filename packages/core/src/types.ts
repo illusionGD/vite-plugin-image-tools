@@ -29,61 +29,164 @@ interface sharpConfigType {
 }
 
 export type PluginOptions = {
-  /** Compression quality */
+  /** 
+   * @en Compression quality, default: 80
+   * @zh 压缩质量，默认值：80
+   */
   quality: number
-  /** Whether to enable in development environment */
+
+  /** 
+   * @en Whether to enable in development environment
+   * @zh 是否在开发环境启用
+   */
   enableDev: boolean
-  /** Whether to enable WebP in development environment */
+
+  /** 
+   * @en Whether to enable WebP in development environment
+   * @zh 是否在开发环境启用 WebP
+   */
   enableDevWebp: boolean
-  /** Whether to enable WebP during build */
+
+  /** 
+   * @en Whether to enable WebP during build
+   * @zh 是否在构建时启用 WebP
+   */
   enableWebp: boolean
-  /** Include patterns */
+
+  /** 
+   * @en Include patterns
+   * @zh 包含规则
+   */
   includes: string | RegExp
-  /** Exclude patterns */
+
+  /** 
+   * @en Exclude patterns
+   * @zh 排除规则
+   */
   excludes: string | RegExp
-  /** Development environment image cache directory, default: node_modules/.cache/vite-plugin-image */
+
+  /** 
+   * @en Development image cache directory, default: node_modules/.cache/vite-plugin-image
+   * @zh 开发环境图片缓存目录，默认为 node_modules/.cache/vite-plugin-image
+   */
   cacheDir: string
-  /** Sharp configuration */
+
+  /** 
+   * @en Sharp library configuration
+   * @zh Sharp 图片处理库配置
+   */
   sharpConfig: sharpConfigType
-  /** SVGO configuration */
+
+  /** 
+   * @en SVGO configuration
+   * @zh SVGO 配置
+   */
   svgoConfig: svgoConfig
+
+  /** 
+   * @en Compatibility mode
+   * @zh 兼容性模式
+   */
   compatibility: boolean
+
+  /** 
+   * @en Class name added to body element when WebP is supported
+   * @zh 当支持 WebP 时添加到 body 的类名
+   */
   bodyWebpClassName: string
-  /** File size limit, files <= this value will not be compressed or converted */
+
+  /** 
+   * @en File size limit, files <= this value will not be compressed or converted
+   * @zh 文件大小限制，小于等于此值的文件不会进行压缩或转换
+   */
   limitSize?: number
-  /** Whether to print logs, default: true */
+
+  /** 
+   * @en Whether to print output logs, default: true
+   * @zh 是否打印输出日志，默认为 true
+   */
   log?: boolean
-  /** Whether to print debug logs */
+
+  /** 
+   * @en Whether to print debug logs
+   * @zh 是否打印调试日志
+   */
   debugLog?: boolean
+
   /**
-   * Filter function
+   * @en Filter function
+   * @zh 过滤函数
    * @param path Image path
+   * @zh 图片路径
    */
   filter?: (path: string) => boolean
-  /** Build WebP configuration */
+
+  /** 
+   * @en Build WebP configuration
+   * @zh 构建 WebP 配置
+   */
   webpConfig?: {
     /**
-     * Filter function
+     * @en Filter function
+     * @zh 过滤函数
      * @param path Image path
+     * @zh 图片路径
      */
     filter?: (path: string) => boolean
-    /** Whether to delete original image */
+
+    /** 
+     * @en Whether to delete original images
+     * @zh 是否删除原图
+     */
     deleteOriginImg?: boolean
-    /** File size limit, files <= this value will not be compressed or converted */
+
+    /** 
+     * @en File size limit, files <= this value will not be compressed or converted
+     * @zh 文件大小限制，小于等于此值的文件不会进行压缩或转换
+     */
     limitSize?: number
   }
-  /** Sprite image configuration */
+
+  /** 
+   * @en Sprite image configuration
+   * @zh 雪碧图配置
+   */
   spritesConfig?: {
     rules: {
-      /** Directory */
+      /** 
+       * @en Directory
+       * @zh 目录
+       */
       dir: string
-      /** Output directory */
+
+      /** 
+       * @en Output directory
+       * @zh 输出目录
+       */
       outputDir?: string
-      /** Suffix, default: sprites */
+
+      /** 
+       * @en File suffix, default: sprites
+       * @zh 文件后缀，默认为 sprites
+       */
       suffix?: string
+
+      /** 
+       * @en Padding value
+       * @zh 图片间距
+       */
       padding?: number
-      /** CSS scaling */
+
+      /** 
+       * @en CSS scaling
+       * @zh CSS 缩放比例
+       */
       scale?: number
+
+      /** 
+       * @en Spritesmith algorithm
+       * @zh 雪碧图布局算法
+       */
       algorithm?:
         | 'top-down'
         | 'left-right'
@@ -91,45 +194,109 @@ export type PluginOptions = {
         | 'alt-diagonal'
         | 'binary-tree'
     }[]
-    /** Output directory */
+
+    /** 
+     * @en Output directory
+     * @zh 输出目录
+     */
     outputDir?: string
-    /** Include patterns */
+
+    /** 
+     * @en Include patterns
+     * @zh 包含规则
+     */
     includes?: string | RegExp
-    /** Exclude patterns */
+
+    /** 
+     * @en Exclude patterns
+     * @zh 排除规则
+     */
     excludes?: string | RegExp
-    /** Suffix, default: sprites */
+
+    /** 
+     * @en File suffix, default: sprites
+     * @zh 文件后缀，默认为 sprites
+     */
     suffix?: string
+
+    /** 
+     * @en Spritesmith algorithm
+     * @zh 雪碧图布局算法
+     */
     algorithm?:
       | 'top-down'
       | 'left-right'
       | 'diagonal'
       | 'alt-diagonal'
       | 'binary-tree'
+
+    /** 
+     * @en Alias path used in CSS
+     * @zh 供 CSS 使用的别名路径
+     */
     aliasPath?: string
+
     /**
-     * Unit conversion
-     * @param unit unit
-     * @param filePath single image path
+     * @en Unit conversion function
+     * @zh 单位转换函数
+     * @param unit Unit value
+     * @param filePath Single image path
      */
     transformUnit?: (unit: number, filePath: string) => string
-    /**
-     * Root value, conversion unit for rem
+
+    /** 
+     * @en Root value for rem conversion
+     * @zh rem 转换的根值
      */
     rootValue?: number
-    /** Whether to delete original images */
+
+    /** 
+     * @en Whether to delete original images
+     * @zh 是否删除原图
+     */
     deleteOriginImg?: boolean
   }
-  /** Public image configuration */
+
+  /** 
+   * @en Public image configuration
+   * @zh public 目录图片配置
+   */
   publicConfig?: {
+    /** 
+     * @en Whether to enable
+     * @zh 是否启用
+     */
     enable?: boolean
-    /** Compression quality */
+
+    /** 
+     * @en Compression quality
+     * @zh 压缩质量
+     */
     quality?: number
-    /** File size limit, files <= this value will not be compressed or converted */
+
+    /** 
+     * @en File size limit, files <= this value will not be compressed or converted
+     * @zh 文件大小限制，小于等于此值的文件不会进行压缩或转换
+     */
     limitSize?: number
   }
-  /** Image assets directory, compatible with vite@4.x version not finding original image paths */
+
+  /** 
+   * @en Image assets directory, used to fix vite@4.x cannot find original image path
+   * @zh 图片资源目录，用于解决 vite@4.x 找不到原始图片路径的问题
+   */
   imgAssetsDir?: string | string[]
+
+  /** 
+   * @en Vite configuration
+   * @zh Vite 配置
+   */
   viteConfig?: UserConfig
+
+  /** 
+   * @en Whether current environment is build
+   * @zh 是否为构建环境
+   */
   isBuild?: boolean
 }
 
