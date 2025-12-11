@@ -79,16 +79,18 @@ export async function processImage(filePath: string) {
     let buildWebp = false
     if (
         enableDevWebp &&
-        !ext.includes(IMG_FORMATS_ENUM.webp) &&
-        webpConfig &&
-        webpConfig.filter
+        !ext.includes(IMG_FORMATS_ENUM.webp)
     ) {
-        if (webpConfig.filter instanceof Function) {
-            if (isAsyncFunction(webpConfig.filter)) {
-                buildWebp = await webpConfig.filter(filePath)
-            } else {
-                buildWebp = webpConfig.filter(filePath)
+        if (webpConfig && webpConfig.filter) {
+            if (webpConfig.filter instanceof Function) {
+                if (isAsyncFunction(webpConfig.filter)) {
+                    buildWebp = await webpConfig.filter(filePath)
+                } else {
+                    buildWebp = webpConfig.filter(filePath)
+                }
             }
+        } else  {
+            buildWebp = true
         }
     }
 

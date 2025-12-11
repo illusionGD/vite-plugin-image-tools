@@ -51,7 +51,7 @@ export async function transformWebpExtInCss(css: string) {
         }
         const { base } = parse(imageUrl)
 
-        if (!imgMap[base]) {
+        if (!imgMap[decodeURIComponent(base)]) {
             return prev + ''
         }
 

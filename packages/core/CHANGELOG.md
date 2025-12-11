@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 3.1.1
+
+### Patch Changes
+
+- fix webpConfig bug
+
 ## 3.1.0
 
 ### Minor Changes

@@ -27,6 +27,7 @@ export default defineConfig({
       enableDev: true,
       enableWebp: true,
       enableDevWebp: true,
+      compatibility: true,
       // limitSize: 1024 *1024,
       // publicConfig: {
       //     enable: true,
@@ -37,17 +38,17 @@ export default defineConfig({
           quality: 80
         }
       },
-      webpConfig: {
-        // limitSize: 1024 *1024,
-        deleteOriginImg: false,
-        filter: (path: string) => {
-          if (path.includes('spine')) {
-            return false
-          }
+    //   webpConfig: {
+    //     // limitSize: 1024 *1024,
+    //     deleteOriginImg: false,
+    //     filter: (path: string) => {
+    //       if (path.includes('spine')) {
+    //         return false
+    //       }
 
-          return true
-        }
-      },
+    //       return true
+    //     }
+    //   },
       // filter: (path: string) => {
       //     try {
       //         const stats = statSync(path)

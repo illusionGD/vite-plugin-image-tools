@@ -17,6 +17,7 @@
       <div class="img-test"></div>
     </div>
     <img :src="img" />
+    <div class="zh-img"></div>
   </div>
 </template>
 <script setup>
@@ -27,6 +28,12 @@ console.log("🚀 ~ img:", img)
 // @use '@/assets/mixin.scss';
 
 $color: #fff;
+.zh-img {
+    background-image: url('./assets/图片_2.jpg');
+    height: 200px;
+    width: 100%;
+    position: absolute;
+}
 
 .base64-img {
   width: 40px;

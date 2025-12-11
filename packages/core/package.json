@@ -1,6 +1,6 @@
 {
     "name": "vite-plugin-image-tools",
-    "version": "3.1.0",
+    "version": "3.1.1",
     "description": "",
     "main": "./src/index.ts",
     "module": "./src/index.ts",
@@ -9,7 +9,8 @@
     "scripts": {
         "build": "rimraf dist && rollup -c",
         "dev": "rollup -c -w",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "publish": "npm run build"
     },
     "files": [
         "dist",
