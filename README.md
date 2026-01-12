@@ -10,7 +10,7 @@
 
 **English** | [中文](./README.zh.md)
 
-A Vite plugin that support image compression and automatic webp, currently only support 'png', 'jpg', 'webp', 'avif', 'tiff', 'gif', 'svg'
+A Vite plugin that supports image compression during build, conversion to WebP, and sprite sheet generation.
 
 ## Feature
 
@@ -468,4 +468,5 @@ json
 ## svgoConfig
 
 svgo configuration: https://svgo.dev/docs/preset-default/
+
 
