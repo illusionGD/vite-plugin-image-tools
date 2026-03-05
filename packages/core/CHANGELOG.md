@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 3.1.2
+
+### Patch Changes
+
+- fix build gif bug
+
 ## 3.1.1
 
 ### Patch Changes
