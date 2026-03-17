@@ -93,8 +93,11 @@ export default function ImageTools(
                     if (!buffer) {
                         return next()
                     }
-
-                    res.setHeader('Content-Type', `image/${type}`)
+                    if (type !== 'svg') {
+                        res.setHeader('Content-Type', `image/${type}`)
+                    } else {
+                        res.setHeader('Content-Type', 'image/svg+xml')
+                    }
                     res.end(buffer)
                 } catch (e) {
                     return next()
