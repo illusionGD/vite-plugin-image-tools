@@ -6,6 +6,9 @@
 
 A Vite plugin that supports image compression during build, conversion to WebP, and sprite sheet generation.
 
+## Notice
+Vite@6 and earlier versions, which are Vite rollup versions.
+
 ## Feature
 
 🚀 Functions
