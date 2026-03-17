@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 3.1.3
+
+### Patch Changes
+
+- fix svg bug and fix clone bug
+
 ## 3.1.2
 
 ### Patch Changes

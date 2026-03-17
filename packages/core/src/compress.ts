@@ -33,6 +33,55 @@ function formatJPGExt(type: string): ImgFormatType {
     : (ext as ImgFormatType)
 }
 
+function deepClone<T>(value: T, seen = new Map<any, any>()): T {
+  if (value === null || typeof value !== 'object') {
+    return value
+  }
+  if (seen.has(value)) {
+    return seen.get(value)
+  }
+  if (Buffer.isBuffer(value)) {
+    return Buffer.from(value) as any
+  }
+  if (value instanceof Date) {
+    return new Date(value.getTime()) as any
+  }
+  if (value instanceof RegExp) {
+    return new RegExp(value.source, value.flags) as any
+  }
+  if (value instanceof Map) {
+    const result = new Map()
+    seen.set(value, result)
+    value.forEach((val, key) => {
+      result.set(deepClone(key, seen), deepClone(val, seen))
+    })
+    return result as any
+  }
+  if (value instanceof Set) {
+    const result = new Set()
+    seen.set(value, result)
+    value.forEach((val) => {
+      result.add(deepClone(val, seen))
+    })
+    return result as any
+  }
+  if (ArrayBuffer.isView(value)) {
+    return new (value.constructor as any)(value as any) as any
+  }
+  if (value instanceof ArrayBuffer) {
+    return value.slice(0) as any
+  }
+
+  const result: any = Array.isArray(value) ? [] : {}
+  seen.set(value, result)
+
+  for (const key of Object.keys(value as any)) {
+    result[key] = deepClone((value as any)[key], seen)
+  }
+
+  return result
+}
+
 /** Compress image buffer */
 export async function pressBufferToImage(
   buffer: Buffer,
@@ -141,7 +190,9 @@ export async function processImage(filePath: string) {
     type,
     sharpConfig[type as SharpImgFormatType]
   )
+  
 
+ 
   if (!newBuffer) {
     return
   }
@@ -149,6 +200,7 @@ export async function processImage(filePath: string) {
   // If compressed image is larger than original, return original image data
   if (buffer.length < newBuffer.length) {
     // Cache path to avoid repeated compression
+
     devNoChangeFiles.push(filePath)
     return { buffer, type: ext.replace('.', '') }
   }
@@ -195,7 +247,7 @@ export async function handleImgBundle(bundle: any) {
     if (transformWebp) {
       try {
         const webpName = replaceWebpExt(key)
-        const webpChunk = structuredClone(chunk)
+        const webpChunk = deepClone(chunk)
         const webpBuffer =
           compressCache[webpName] ||
           (await pressBufferToImage(
