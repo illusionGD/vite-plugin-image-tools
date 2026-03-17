@@ -1,14 +1,11 @@
 # vite-plugin-image-tools
 
-<p align="center">
-  <a href="https://vite.dev" target="_blank" rel="noopener noreferrer">
-    <img width="180" src="https://vite.dev/logo.svg" alt="Vite logo">
-  </a>
-</p>
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 vite插件，打包压缩图片，支持转wbep，支持合并精灵图
+
+## 注意
+vite@6及以下版本，也就是vite的rollup版本
 
 ## 特性
 
