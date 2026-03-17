@@ -1,11 +1,5 @@
 # vite-plugin-image-tools
 
-<p align="center">
-  <a href="https://vite.dev" target="_blank" rel="noopener noreferrer">
-    <img width="180" src="https://vite.dev/logo.svg" alt="Vite logo">
-  </a>
-</p>
-
 [![License MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **English** | [中文](./README.zh.md)
