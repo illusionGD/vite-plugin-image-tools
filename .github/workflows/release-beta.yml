@@ -1,0 +1,61 @@
+name: Release Beta
+on:
+  push:
+    branches: [beta]
+    paths:
+      - 'packages/**'
+      - '.changeset/**'
+
+jobs:
+  release-beta:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Git user
+        run: |
+          git config --global user.name "hollow_orld"
+
+      - name: Install Pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build Packages
+        run: pnpm -r --filter=vite-plugin-image-tools build
+
+      - name: Enter prerelease mode
+        run: pnpm changeset pre enter beta
+
+      - name: Version (prerelease)
+        run: pnpm changeset version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit version bump
+        run: |
+          git add .
+          git diff --staged --quiet || (git commit -m "[ci] Version Packages (beta)" && git push)
+
+      - name: Publish Beta
+        run: pnpm changeset publish --tag beta
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
