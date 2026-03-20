@@ -12,7 +12,8 @@
         "push": "npm run commit && git push",
         "prepare": "husky install",
         "release": "changeset add && changeset version",
-        "publish:release": "npm run release && npm run push"
+        "publish:release": "npm run release && npm run push",
+        "publish:release-beta": "changeset pre enter beta && npm run release && npm run push"
     },
     "keywords": [
         "vite",

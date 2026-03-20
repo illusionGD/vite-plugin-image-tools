@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 4.0.0-beta.0
+
+### Major Changes
+
+- release-4.0.0
+
 ## 3.1.3
 
 ### Patch Changes

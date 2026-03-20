@@ -42,19 +42,6 @@ jobs:
       - name: Build Packages
         run: pnpm -r --filter=vite-plugin-image-tools build
 
-      - name: Check pre mode
-        id: pre
-        run: |
-          if [ -f .changeset/pre.json ] && grep -q '"mode": "pre"' .changeset/pre.json; then
-            echo "in_pre=true" >> $GITHUB_OUTPUT
-          else
-            echo "in_pre=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Enter prerelease mode
-        if: steps.pre.outputs.in_pre != 'true'
-        run: pnpm changeset pre enter beta
-
       - name: Setup Changesets
         uses: changesets/action@v1
         with:
@@ -69,5 +56,3 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Exit prerelease mode
-        run: pnpm changeset pre exit
