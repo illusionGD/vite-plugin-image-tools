@@ -46,7 +46,6 @@ export const DEFAULT_CONFIG: PluginOptions = {
     },
     spritesConfig: {
         rules: [],
-        suffix: 'sprites',
         algorithm: 'binary-tree'
     }
 }

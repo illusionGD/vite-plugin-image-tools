@@ -3,6 +3,7 @@ import { parse as parseHtml } from 'node-html-parser'
 import { replaceExt, getGlobalConfig, getImgConvertMap } from './utils'
 import { parse } from 'path'
 import { IMG_FORMATS_ENUM } from './constants'
+import type { SharpImgFormatType } from './types'
 interface BackgroundImageSelector {
     selector: string
     imageUrl: string
@@ -42,7 +43,10 @@ export async function extractBackgroundImageSelectors(
 }
 
 /** Replace image extension in CSS to target format */
-export async function transformExtInCss(css: string, targetFormat = IMG_FORMATS_ENUM.webp) {
+export async function transformExtInCss(
+    css: string,
+    targetFormat: SharpImgFormatType = IMG_FORMATS_ENUM.webp
+) {
     const { bodyWebpClassName } = getGlobalConfig()
     const imgMap = getImgConvertMap()
     const selectors = await extractBackgroundImageSelectors(css)
@@ -67,7 +71,10 @@ export async function transformExtInCss(css: string, targetFormat = IMG_FORMATS_
 }
 
 /** Replace image extension in HTML to target format */
-export async function transformExtInHtml(html: string, targetFormat = IMG_FORMATS_ENUM.webp) {
+export async function transformExtInHtml(
+    html: string,
+    targetFormat: SharpImgFormatType = IMG_FORMATS_ENUM.webp
+) {
     const { bodyWebpClassName } = getGlobalConfig()
     const doc = parseHtml(html)
     const setConvertedAttr = (dom: any, url: string | undefined) => {

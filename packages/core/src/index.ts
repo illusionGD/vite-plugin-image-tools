@@ -20,9 +20,11 @@ import {
     initBundleStyles,
     initOriginalFileNames,
     initSprite,
-    clearSpriteCache
+    clearSpriteCache,
+    getSpriteDevWatchInfo
 } from './sprites'
 import { printLog } from './log'
+import { generateCssArtifacts, generateCssArtifactsForDev } from './css-gen'
 
 export default function ImageTools(
     options: Partial<Omit<PluginOptions, 'viteConfig' | 'isBuild'>> = {}
@@ -80,11 +82,56 @@ export default function ImageTools(
             if (!enableDev) {
                 return
             }
+            const cssGenOutputFiles = new Set(
+                (getGlobalConfig().cssGen?.rules || []).map((rule) =>
+                    path.resolve(process.cwd(), rule.stylePath)
+                )
+            )
+            const cssGenWatchDirs =
+                getGlobalConfig().cssGen?.rules?.map((rule) =>
+                    path.resolve(process.cwd(), rule.inputDir)
+                ) || []
             const spriteWatchDirs =
                 getGlobalConfig().spritesConfig?.rules?.map((rule) =>
                     path.resolve(process.cwd(), rule.dir)
                 ) || []
+            const { extraWatchDirs, generatedPngAbsPaths } =
+                getSpriteDevWatchInfo()
+            const spriteGeneratedOutputs = new Set(
+                generatedPngAbsPaths.map((p) => path.resolve(p))
+            )
+            const isFileUnderDir = (file: string, dir: string) => {
+                const f = path.resolve(file)
+                const d = path.resolve(dir)
+                if (f === d) return true
+                const rel = path.relative(d, f)
+                return (
+                    rel !== '' &&
+                    !rel.startsWith('..') &&
+                    !path.isAbsolute(rel)
+                )
+            }
             let spriteRebuildTimer: ReturnType<typeof setTimeout> | undefined
+            let cssGenRebuildTimer: ReturnType<typeof setTimeout> | undefined
+            const scheduleCssGenRebuild = () => {
+                if (!cssGenWatchDirs.length) {
+                    return
+                }
+                if (cssGenRebuildTimer) {
+                    clearTimeout(cssGenRebuildTimer)
+                }
+                cssGenRebuildTimer = setTimeout(async () => {
+                    try {
+                        const changed = await generateCssArtifactsForDev()
+                        if (changed) {
+                            server.moduleGraph.invalidateAll()
+                            server.ws.send({ type: 'full-reload' })
+                        }
+                    } catch (error) {
+                        console.error('❌ [DEBUG] CSS generation failed:', error)
+                    }
+                }, 120)
+            }
             const scheduleSpriteRebuild = () => {
                 if (!spriteWatchDirs.length) {
                     return
@@ -96,20 +143,48 @@ export default function ImageTools(
                     try {
                         clearSpriteCache()
                         await initSprite({} as any, viteConfig, false)
+                        server.moduleGraph.invalidateAll()
                         server.ws.send({ type: 'full-reload' })
                     } catch (error) {
                         console.error('❌ [DEBUG] Sprite rebuild failed:', error)
                     }
                 }, 120)
             }
+            if (cssGenWatchDirs.length) {
+                // Generate once on dev server start.
+                void generateCssArtifactsForDev()
+            }
+            cssGenWatchDirs.forEach((dir) => server.watcher.add(dir))
             spriteWatchDirs.forEach((dir) => server.watcher.add(dir))
+            extraWatchDirs.forEach((dir) => server.watcher.add(dir))
+            generatedPngAbsPaths.forEach((p) => server.watcher.add(p))
+            const onCssGenChange = (file: string) => {
+                const absFile = path.resolve(file)
+                if (cssGenOutputFiles.has(absFile)) {
+                    return
+                }
+                if (
+                    cssGenWatchDirs.some((dir) => isFileUnderDir(absFile, dir))
+                ) {
+                    scheduleCssGenRebuild()
+                }
+            }
             const onSpriteChange = (file: string) => {
-                if (spriteWatchDirs.some((dir) => file.startsWith(dir))) {
+                const absFile = path.resolve(file)
+                if (spriteGeneratedOutputs.has(absFile)) {
+                    return
+                }
+                if (
+                    spriteWatchDirs.some((dir) => isFileUnderDir(absFile, dir))
+                ) {
                     scheduleSpriteRebuild()
                 }
             }
+            server.watcher.on('add', onCssGenChange)
             server.watcher.on('add', onSpriteChange)
+            server.watcher.on('change', onCssGenChange)
             server.watcher.on('change', onSpriteChange)
+            server.watcher.on('unlink', onCssGenChange)
             server.watcher.on('unlink', onSpriteChange)
             server.middlewares.use(async (req, res, next) => {
                 const url = req.url || ''
@@ -180,12 +255,10 @@ export default function ImageTools(
                 ]
             }
         },
-        async generateBundle(_options, bundle) {
+        async generateBundle(options, bundle) {
             if (!isBuild) return
             const globalConfig = getGlobalConfig()
-            const enableMainWebp =
-                globalConfig.convert.enable &&
-                globalConfig.convert.format === 'webp'
+           
             await initOriginalFileNames(bundle, viteConfig)
             await initBundleStyles(bundle)
             await handleSpritesCssBundle(this, bundle)
@@ -194,6 +267,11 @@ export default function ImageTools(
             }
 
             await handleImgBundle(bundle)
+            const outDir = path.resolve(
+                process.cwd(),
+                options.dir || viteConfig.build?.outDir || 'dist'
+            )
+            await generateCssArtifacts(outDir)
         },
         async writeBundle(opt, bundle) {
             const { compatibility, log, publicConfig, convert } =

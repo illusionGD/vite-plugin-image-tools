@@ -4,30 +4,28 @@
 
 **English** | [中文](./README.zh.md)
 
-A Vite plugin that supports image compression during build, conversion to WebP, and sprite sheet generation.
+A Vite plugin for image compression, format conversion (WebP/AVIF), sprite sheet generation, and CSS class generation.
 
 ## Notice
-Vite@6 and earlier versions, which are Vite rollup versions.
 
-## Feature
+Vite 6 and earlier (Rollup-based Vite).
 
-🚀 Functions
+## Features
 
-- Supports production environment compression and WebP generation
-- Supports development environment compression and WebP preview
-- Configurable image compression quality
-- Automatic sprite merging
+- **Compression**: Production and development image compression
+- **Convert**: Main-format conversion (WebP, AVIF, etc.) with `convert` config
+- **perImage**: Per-image quality and format overrides
+- **Sprites**: Merge images into sprite sheets; dev watcher rebuilds on source changes
+- **cssGen**: Auto-generate CSS classes from image directories (with variant rules like `:hover`)
+- **Compatibility mode**: WebP detection for CSS background images only
 
 ## Installation
 
 ```bash
-# npm
 npm i -D vite-plugin-image-tools
-
-# pnpm
+# or
 pnpm i -D vite-plugin-image-tools
-
-#yarn
+# or
 yarn add -D vite-plugin-image-tools
 ```
 
@@ -41,429 +39,217 @@ import VitePluginImageTools from 'vite-plugin-image-tools'
 export default defineConfig({
   plugins: [
     VitePluginImageTools({
-      quality: 80,
-      enableWebp: true，
-      enableDev:true,
-      enableDevWebp:true
+      quality: 90,
+      enableDev: true,
+      enableDevConvert: true
+    })
+  ]
+})
+```
+
+## Detailed Configuration Example
+
+Full configuration with all features:
+
+```js
+// vite.config.js
+import { defineConfig } from 'vite'
+import VitePluginImageTools from 'vite-plugin-image-tools'
+
+export default defineConfig({
+  plugins: [
+    VitePluginImageTools({
+      // Basic
+      quality: 90,
+      enableDev: true,
+      enableDevConvert: true,
+      compatibility: true,
+
+      // Format conversion
+      convert: {
+        enable: true,
+        format: 'webp',
+        deleteOriginImg: false,
+        limitSize: 2 * 1024
+      },
+
+      // Per-image overrides
+      perImage: async (filePath) => {
+        if (filePath.includes('hero.jpg')) return { format: 'avif', quality: 60 }
+        if (filePath.includes('thumb')) return { quality: 50 }
+        return {}
+      },
+
+      // Sharp format options
+      sharpConfig: {
+        webp: { quality: 80 },
+        avif: { quality: 60 }
+      },
+
+      // Sprite sheets
+      spritesConfig: {
+        rules: [
+          {
+            dir: './src/assets/icons',
+            name: 'icons',
+            outputDir: './src/assets',
+            algorithm: 'binary-tree'
+          }
+        ],
+        rootValue: 16
+      },
+
+      // Auto-generate CSS classes
+      cssGen: {
+        rules: [
+          {
+            inputDir: './src/assets/icons',
+            stylePath: 'assets/generated/image-classes.css',
+            classPrefix: 'ui--',
+            variantRules: [{ regex: /_hover$/, pseudo: ':hover' }]
+          },
+          {
+            inputDir: './src/assets',
+            stylePath: 'assets/generated/image-classes.css',
+            includes: /\.(png|jpe?g)$/i,
+            excludes: /icons\//
+          }
+        ]
+      },
+
+      // Compress public/ images
+      publicConfig: {
+        enable: true,
+        quality: 80
+      }
     })
   ]
 })
 ```
 
 ## Options
-| Option            | Type              | Default                                                                                                         | Description                                                                         |
-| ----------------- | ----------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| quality           | number            | 80                                                                                                              | Image quality (1–100)                                                               |
-| includes          | string / RegExp   | ''                                                                                                              | Include filter, e.g. `'xxx.png'.includes(includes)` or `includes.test('xxx.png')`   |
-| excludes          | string / RegExp   | ''                                                                                                              | Exclude filter, e.g. `!'xxx.png'.includes(excludes)` or `!excludes.test('xxx.png')` |
-| filter            | function<string>  | () => true                                                                                                      | Custom filter function (async supported), param: image path                         |
-| limitSize         | number            | none                                                                                                            | Skip compression for files <= this size                                             |
-| compatibility     | boolean           | false                                                                                                           | WebP compatibility mode; only CSS images will be converted to WebP when true        |
-| bodyWebpClassName | string            | webp                                                                                                            | Class added to `<body>` when WebP is supported                                      |
-| enableWebp        | boolean           | false                                                                                                           | Whether to convert images to WebP in production                                     |
-| enableDev         | boolean           | false                                                                                                           | Enable compression in development                                                   |
-| enableDevWebp     | boolean           | false                                                                                                           | Enable WebP generation in development                                               |
-| cacheDir          | string            | `node_modules/.cache/vite-plugin-image`                                                                         | Cache directory (development only)                                                  |
-| spritesConfig     | Object            |                                                                                                                 | Sprite sheet configuration                                                          |
-| webpConfig        | Object            |                                                                                                                 | WebP build configuration                                                            |
-| sharpConfig       | Object            | { jpeg?, jpg?, png?, webp?, avif?, tiff?, gif? }                                                                | Sharp configuration                                                                 |
-| svgoConfig        | Object            | `{ plugins: ['preset-default', {name:'removerXMLNS'}, {name:'removeViewBox'}], js2svg:{indent:2, pretty:true}}` | SVGO configuration                                                                  |
-| publicConfig      | Object            |                                                                                                                 | Config for compressing images under `public/`                                       |
-| imgAssetsDir      | string / string[] |                                                                                                                 | Image assets directory (required for Vite 4.x)                                      |
-| log               | boolean           | true                                                                                                            | Whether to print logs                                                               |
 
-```ts
-export type PluginOptions = {
-  /** 
-   * @en Compression quality, default: 80
-   * @zh 压缩质量，默认值：80
-   */
-  quality: number
+| Option            | Type              | Default                                                       | Description                                                    |
+| ----------------- | ----------------- | ------------------------------------------------------------- | -------------------------------------------------------------- |
+| quality           | number            | 80                                                            | Global compression quality (1–100)                             |
+| enableDev         | boolean           | false                                                         | Enable compression in development                             |
+| enableDevConvert  | boolean           | false                                                         | Enable format conversion in development (default: webp)        |
+| convert           | object            | `{ enable: true, format: 'webp', deleteOriginImg: false }`     | Main-format conversion config                                 |
+| perImage          | function          | `async () => ({})`                                            | Per-image resolver for quality/format overrides               |
+| includes          | string / RegExp   | `/\.(png\|jpe?g\|gif\|webp\|svg\|avif)(\?.*)?$/i`             | Include filter                                                |
+| excludes          | string / RegExp   | `''`                                                          | Exclude filter                                                |
+| filter            | function          | `() => true`                                                  | Custom filter (async supported)                                |
+| limitSize         | number            | -                                                             | Skip compression/conversion for files <= this size             |
+| compatibility     | boolean           | false                                                         | WebP compatibility mode (CSS images only)                       |
+| bodyWebpClassName | string            | `'webp'`                                                      | Class added to `<body>` when WebP is supported                |
+| cacheDir          | string            | `node_modules/.cache/vite-plugin-image`                        | Dev cache directory                                           |
+| spritesConfig     | object            | -                                                             | Sprite sheet configuration                                    |
+| cssGen            | object            | `{ rules: [], format: 'css' }`                                | CSS class generation rules                                    |
+| sharpConfig       | object            | `{}`                                                          | Sharp options (jpeg, png, webp, avif, etc.)                   |
+| svgoConfig        | object            | preset-default + removerXMLNS, removeViewBox                   | SVGO configuration                                            |
+| publicConfig      | object            | -                                                             | Config for `public/` images                                   |
+| imgAssetsDir      | string / string[] | -                                                             | Image assets dir (for Vite 4.x compatibility)                 |
+| log               | boolean           | true                                                          | Print output logs                                             |
 
-  /** 
-   * @en Whether to enable in development environment
-   * @zh 是否在开发环境启用
-   */
-  enableDev: boolean
+## Configuration Details
 
-  /** 
-   * @en Whether to enable WebP in development environment
-   * @zh 是否在开发环境启用 WebP
-   */
-  enableDevWebp: boolean
+### convert
 
-  /** 
-   * @en Whether to enable WebP during build
-   * @zh 是否在构建时启用 WebP
-   */
-  enableWebp: boolean
+Main-format conversion (4.0+):
 
-  /** 
-   * @en Include patterns
-   * @zh 包含规则
-   */
-  includes: string | RegExp
-
-  /** 
-   * @en Exclude patterns
-   * @zh 排除规则
-   */
-  excludes: string | RegExp
-
-  /** 
-   * @en Development image cache directory, default: node_modules/.cache/vite-plugin-image
-   * @zh 开发环境图片缓存目录，默认为 node_modules/.cache/vite-plugin-image
-   */
-  cacheDir: string
-
-  /** 
-   * @en Sharp library configuration
-   * @zh Sharp 图片处理库配置
-   */
-  sharpConfig: sharpConfigType
-
-  /** 
-   * @en SVGO configuration
-   * @zh SVGO 配置
-   */
-  svgoConfig: svgoConfig
-
-  /** 
-   * @en Compatibility mode
-   * @zh 兼容性模式
-   */
-  compatibility: boolean
-
-  /** 
-   * @en Class name added to body element when WebP is supported
-   * @zh 当支持 WebP 时添加到 body 的类名
-   */
-  bodyWebpClassName: string
-
-  /** 
-   * @en File size limit, files <= this value will not be compressed or converted
-   * @zh 文件大小限制，小于等于此值的文件不会进行压缩或转换
-   */
-  limitSize?: number
-
-  /** 
-   * @en Whether to print output logs, default: true
-   * @zh 是否打印输出日志，默认为 true
-   */
-  log?: boolean
-
-  /** 
-   * @en Whether to print debug logs
-   * @zh 是否打印调试日志
-   */
-  debugLog?: boolean
-
-  /**
-   * @en Filter function
-   * @zh 过滤函数
-   * @param path Image path
-   * @zh 图片路径
-   */
-  filter?: (path: string) => boolean
-
-  /** 
-   * @en Build WebP configuration
-   * @zh 构建 WebP 配置
-   */
-  webpConfig?: {
-    /**
-     * @en Filter function
-     * @zh 过滤函数
-     * @param path Image path
-     * @zh 图片路径
-     */
-    filter?: (path: string) => boolean
-
-    /** 
-     * @en Whether to delete original images
-     * @zh 是否删除原图
-     */
-    deleteOriginImg?: boolean
-
-    /** 
-     * @en File size limit, files <= this value will not be compressed or converted
-     * @zh 文件大小限制，小于等于此值的文件不会进行压缩或转换
-     */
-    limitSize?: number
-  }
-
-  /** 
-   * @en Sprite image configuration
-   * @zh 雪碧图配置
-   */
-  spritesConfig?: {
-    rules: {
-      /** 
-       * @en Directory
-       * @zh 目录
-       */
-      dir: string
-
-      /** 
-       * @en Output directory
-       * @zh 输出目录
-       */
-      outputDir?: string
-
-      /** 
-       * @en File suffix, default: sprites
-       * @zh 文件后缀，默认为 sprites
-       */
-      suffix?: string
-
-      /** 
-       * @en Padding value
-       * @zh 图片间距
-       */
-      padding?: number
-
-      /** 
-       * @en CSS scaling
-       * @zh CSS 缩放比例
-       */
-      scale?: number
-
-      /** 
-       * @en Spritesmith algorithm
-       * @zh 雪碧图布局算法
-       */
-      algorithm?:
-        | 'top-down'
-        | 'left-right'
-        | 'diagonal'
-        | 'alt-diagonal'
-        | 'binary-tree'
-    }[]
-
-    /** 
-     * @en Output directory
-     * @zh 输出目录
-     */
-    outputDir?: string
-
-    /** 
-     * @en Include patterns
-     * @zh 包含规则
-     */
-    includes?: string | RegExp
-
-    /** 
-     * @en Exclude patterns
-     * @zh 排除规则
-     */
-    excludes?: string | RegExp
-
-    /** 
-     * @en File suffix, default: sprites
-     * @zh 文件后缀，默认为 sprites
-     */
-    suffix?: string
-
-    /** 
-     * @en Spritesmith algorithm
-     * @zh 雪碧图布局算法
-     */
-    algorithm?:
-      | 'top-down'
-      | 'left-right'
-      | 'diagonal'
-      | 'alt-diagonal'
-      | 'binary-tree'
-
-    /** 
-     * @en Alias path used in CSS
-     * @zh 供 CSS 使用的别名路径
-     */
-    aliasPath?: string
-
-    /**
-     * @en Unit conversion function
-     * @zh 单位转换函数
-     * @param unit Unit value
-     * @param filePath Single image path
-     */
-    transformUnit?: (unit: number, filePath: string) => string
-
-    /** 
-     * @en Root value for rem conversion
-     * @zh rem 转换的根值
-     */
-    rootValue?: number
-
-    /** 
-     * @en Whether to delete original images
-     * @zh 是否删除原图
-     */
-    deleteOriginImg?: boolean
-  }
-
-  /** 
-   * @en Public image configuration
-   * @zh public 目录图片配置
-   */
-  publicConfig?: {
-    /** 
-     * @en Whether to enable
-     * @zh 是否启用
-     */
-    enable?: boolean
-
-    /** 
-     * @en Compression quality
-     * @zh 压缩质量
-     */
-    quality?: number
-
-    /** 
-     * @en File size limit, files <= this value will not be compressed or converted
-     * @zh 文件大小限制，小于等于此值的文件不会进行压缩或转换
-     */
-    limitSize?: number
-  }
-
-  /** 
-   * @en Image assets directory, used to fix vite@4.x cannot find original image path
-   * @zh 图片资源目录，用于解决 vite@4.x 找不到原始图片路径的问题
-   */
-  imgAssetsDir?: string | string[]
-
-  /** 
-   * @en Vite configuration
-   * @zh Vite 配置
-   */
-  viteConfig?: UserConfig
-
-  /** 
-   * @en Whether current environment is build
-   * @zh 是否为构建环境
-   */
-  isBuild?: boolean
+```js
+convert: {
+  enable: true,
+  format: 'webp',        // or 'avif', 'png', etc.
+  deleteOriginImg: false,
+  limitSize: 2048,       // skip conversion for small files
+  filter: (path) => true
 }
 ```
-# Configuration Details
 
-## quality
-Global compression quality (1–100).
-If sharpConfig specifies its own quality, the global setting does not apply.
+### perImage
 
-## includes
+Override quality or format per image:
 
-Include filter for images. Supports string or RegExp. e.g.: `'xxx.png'.includes(includes) includes.test('xxx.png')`
-
-## excludes
-
-Exclude filter for images. Supports string or RegExp. e.g.: `! 'xxx.png'.includes(excludes) !includes.test('xxx.png')`
-
-## filter
-
-Custom global filter function. Accepts image path, returns boolean. Supports async.
-
-## enableWebp
-
-Enable WebP conversion in production.
-When true, all filtered images will also produce a WebP version and the file extension will be automatically replaced (xxx.png → xxx.webp).
-
-⚠️ Note: Some low-end devices do not support WebP. Use cautiously.
-
-## webpConfig
-
-Configuration related to packaging webp:
-
-json
-
-```json
-{
-    "filter": "(path: string) => boolean",
-    "deleteOriginImg": false,
-    "limitSize": 0
+```js
+perImage: async (filePath) => {
+  if (filePath.includes('hero.jpg')) return { format: 'avif', quality: 60 }
+  if (filePath.includes('thumb')) return { quality: 50 }
+  return {}
 }
 ```
-- filter: Filter function for WebP conversion
-- deleteOriginImg: Delete the original image after conversion
-- limitSize: Skip WebP conversion for files <= this size
 
-## compatibility
-Enable WebP compatibility mode.
-When enabled:
+### spritesConfig
 
-- Inserts async script in <head> to detect WebP support
+Merge images in a directory into a sprite sheet:
 
-- Dynamically toggles WebP class
-
-- Only CSS background images will be converted
-
-⚠️ iOS may not handle async <head> scripts properly, causing duplicate loads. Use carefully.
-
-## enableDev
-
-Whether to take effect in the development environment, default is false.  
-When enabled, images can be automatically packaged and compressed in the development environment.
-
-## enableDevWebp
-
-Whether to enable webp conversion in the development environment, default is false.  
-When enabled, webp conversion can be automatically performed in the development environment.
-
-## cacheDir
-
-Image cache path in the development environment, default: 'node_modules/.cache/vite-plugin-image'  
-It avoids repeated compression during development and optimizes the development experience.
-
-## spritesConfig
-
-Sprite image configuration: When enabled, images in a folder can be merged into a single sprite image, and the background image size, position, and repeat in CSS will be automatically modified.
-
-json
-
-```json
-{
-    "rules": [{
-        "dir": "string",
-        "suffix": "sprites",
-        "padding": 0,
-        "quality": 80,
-        "scale": 1,
-        "algorithm": "top-down | left-right | diagonal | alt-diagonal | binary-tree"
-    }],
-    "outputDir": "string",
-    "deleteOriginImg": false,
-    "includes": "string | RegExp",
-    "excludes": "string | RegExp",
-    "suffix": "sprites",
-    "algorithm": "...",
-    "transformUnit": "(unit: string, filePath: string) => string",
-    "rootValue": 16
+```js
+spritesConfig: {
+  rules: [
+    {
+      dir: './src/assets/icons',
+      name: 'icons',             // optional, default: dir name + '-sprites'
+      outputDir: './src/assets', // optional, default: same as dir
+      padding: 0,
+      algorithm: 'binary-tree'  // top-down | left-right | diagonal | alt-diagonal | binary-tree
+    }
+  ],
+  outputDir: './dist/sprites',
+  includes: /\.(png|jpg)$/,
+  excludes: /\.(svg)$/,
+  rootValue: 16,
+  deleteOriginImg: false
 }
 ```
-⚠️ Notes:
 
-- width / height in CSS must be numeric (px or rem), not %
+**Dev watcher**: When `enableDev` is true, the plugin watches sprite source directories. On add/change/unlink of images, it rebuilds the sprite, invalidates the module graph, and triggers a full reload.
 
-- When using rem, rootValue must be provided to convert px correctly
+**Note**: CSS `width`/`height` must be numeric (px or rem), not `%`.
 
-## sharpConfig
+### cssGen
 
-sharp compression configuration: [sharp configuration](https://sharp.pixelplumbing.com/api-output/#_top)
+Auto-generate CSS classes from image directories:
 
-json
-
-```json
-    jpeg?: JpegOptions
-    jpg?: JpegOptions
-    png?: PngOptions
-    webp?: WebpOptions
-    avif?: AvifOptions
-    tiff?: TiffOptions
-    gif?: GifOptions
+```js
+cssGen: {
+  rules: [
+    {
+      inputDir: './src/assets/icons',
+      stylePath: 'assets/generated/image-classes.css',
+      classPrefix: 'ui--',
+      includes: /\.(png|jpg)$/,
+      excludes: /\.(svg)$/,
+      variantRules: [
+        { regex: /_hover$/, pseudo: ':hover' }
+      ],
+      resolveClass: (filePath, baseName) => `ui--${baseName}`
+    }
+  ]
+}
 ```
 
-## svgoConfig
+**Dev watcher**: When source images change, regenerates the CSS file and triggers a full reload.
 
-svgo configuration: https://svgo.dev/docs/preset-default/
+### compatibility
 
+When `true`, inserts a script to detect WebP support and only converts CSS background images. Use when targeting browsers that may not support WebP.
 
+### enableDev / enableDevConvert
+
+- `enableDev`: Enable compression in development, default: false
+- `enableDevConvert`: Enable format conversion in development (default: webp), default: false
+
+### sharpConfig
+
+[Sharp output options](https://sharp.pixelplumbing.com/api-output/):
+
+```js
+sharpConfig: {
+  webp: { quality: 80 },
+  avif: { quality: 60 }
+}
+```
+
+### svgoConfig
+
+[SVGO preset-default](https://svgo.dev/docs/preset-default/)
