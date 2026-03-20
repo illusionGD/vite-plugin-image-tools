@@ -8,18 +8,19 @@ import {
     setGlobalConfig,
     handleConvertImgMap,
     getGlobalConfig,
-    handleReplaceWebp,
+    handleReplaceConverted,
     compressCache,
     isCssFile
 } from './utils'
 import type { PluginOptions } from './types'
-import { transformWebpExtInHtml } from './transform'
+import { transformExtInHtml } from './transform'
 import {
     handleSpriteCss,
     handleSpritesCssBundle,
     initBundleStyles,
     initOriginalFileNames,
-    initSprite
+    initSprite,
+    clearSpriteCache
 } from './sprites'
 import { printLog } from './log'
 
@@ -79,6 +80,37 @@ export default function ImageTools(
             if (!enableDev) {
                 return
             }
+            const spriteWatchDirs =
+                getGlobalConfig().spritesConfig?.rules?.map((rule) =>
+                    path.resolve(process.cwd(), rule.dir)
+                ) || []
+            let spriteRebuildTimer: ReturnType<typeof setTimeout> | undefined
+            const scheduleSpriteRebuild = () => {
+                if (!spriteWatchDirs.length) {
+                    return
+                }
+                if (spriteRebuildTimer) {
+                    clearTimeout(spriteRebuildTimer)
+                }
+                spriteRebuildTimer = setTimeout(async () => {
+                    try {
+                        clearSpriteCache()
+                        await initSprite({} as any, viteConfig, false)
+                        server.ws.send({ type: 'full-reload' })
+                    } catch (error) {
+                        console.error('❌ [DEBUG] Sprite rebuild failed:', error)
+                    }
+                }, 120)
+            }
+            spriteWatchDirs.forEach((dir) => server.watcher.add(dir))
+            const onSpriteChange = (file: string) => {
+                if (spriteWatchDirs.some((dir) => file.startsWith(dir))) {
+                    scheduleSpriteRebuild()
+                }
+            }
+            server.watcher.on('add', onSpriteChange)
+            server.watcher.on('change', onSpriteChange)
+            server.watcher.on('unlink', onSpriteChange)
             server.middlewares.use(async (req, res, next) => {
                 const url = req.url || ''
                 const isFilter = await filterImage(url)
@@ -182,8 +214,8 @@ export default function ImageTools(
 
                 if (/(html)$/.test(key)) {
                     const htmlCode = compatibility
-                        ? await transformWebpExtInHtml(chunk.source)
-                        : await handleReplaceWebp(chunk.source)
+                        ? await transformExtInHtml(chunk.source, convert.format)
+                        : await handleReplaceConverted(chunk.source)
                     writeFileSync(join(opt.dir!, chunk.fileName), htmlCode)
                 }
             }

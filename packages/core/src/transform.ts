@@ -1,7 +1,8 @@
 import postcss from 'postcss'
 import { parse as parseHtml } from 'node-html-parser'
-import { replaceWebpExt, getGlobalConfig, getImgWebpMap } from './utils'
+import { replaceExt, getGlobalConfig, getImgConvertMap } from './utils'
 import { parse } from 'path'
+import { IMG_FORMATS_ENUM } from './constants'
 interface BackgroundImageSelector {
     selector: string
     imageUrl: string
@@ -40,12 +41,12 @@ export async function extractBackgroundImageSelectors(
     return backgroundImageSelectors
 }
 
-/** Replace image extension in CSS to webp */
-export async function transformWebpExtInCss(css: string) {
+/** Replace image extension in CSS to target format */
+export async function transformExtInCss(css: string, targetFormat = IMG_FORMATS_ENUM.webp) {
     const { bodyWebpClassName } = getGlobalConfig()
-    const imgMap = getImgWebpMap()
+    const imgMap = getImgConvertMap()
     const selectors = await extractBackgroundImageSelectors(css)
-    const webpCss = selectors.reduce((prev, { selector, imageUrl }) => {
+    const convertedCss = selectors.reduce((prev, { selector, imageUrl }) => {
         if (!imageUrl) {
             return prev + ''
         }
@@ -58,33 +59,33 @@ export async function transformWebpExtInCss(css: string) {
         return (
             prev +
             `body.no-${bodyWebpClassName} ${selector}{background-image: url(${imageUrl})}` +
-            `body.${bodyWebpClassName} ${selector}{background-image: url(${replaceWebpExt(imageUrl)})}`
+            `body.${bodyWebpClassName} ${selector}{background-image: url(${replaceExt(imageUrl, targetFormat)})}`
         )
     }, '')
 
-    return css + webpCss
+    return css + convertedCss
 }
 
-/** Replace image extension in HTML to webp */
-export async function transformWebpExtInHtml(html: string) {
+/** Replace image extension in HTML to target format */
+export async function transformExtInHtml(html: string, targetFormat = IMG_FORMATS_ENUM.webp) {
     const { bodyWebpClassName } = getGlobalConfig()
     const doc = parseHtml(html)
-    const setWebpAttr = (dom: any, url: string | undefined) => {
+    const setConvertedAttr = (dom: any, url: string | undefined) => {
         if (url) {
-            dom.setAttribute(bodyWebpClassName, replaceWebpExt(url))
+            dom.setAttribute(bodyWebpClassName, replaceExt(url, targetFormat))
         }
     }
 
     doc.querySelectorAll('img[src]').forEach((img) => {
-        setWebpAttr(img, img.getAttribute('src'))
+        setConvertedAttr(img, img.getAttribute('src'))
     })
 
     doc.querySelectorAll('source[src], source[srcset]').forEach((source) => {
         if (source.hasAttribute('src')) {
-            setWebpAttr(source, source.getAttribute('src'))
+            setConvertedAttr(source, source.getAttribute('src'))
         }
         if (source.hasAttribute('srcset')) {
-            setWebpAttr(source, source.getAttribute('srcset'))
+            setConvertedAttr(source, source.getAttribute('srcset'))
         }
     })
 
@@ -99,7 +100,7 @@ export async function transformWebpExtInHtml(html: string) {
         if (match && match[2]) {
             element.setAttribute(
                 bodyWebpClassName,
-                style.replace(match[2], replaceWebpExt(match[2]))
+                style.replace(match[2], replaceExt(match[2], targetFormat))
             )
         }
     })
