@@ -8,9 +8,11 @@ import sharp from 'sharp'
 import { pressBufferToImage } from './compress'
 import { logSize } from './log'
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
+import { resolveInternalConfig, type InternalConfig } from './config/resolve'
 
 const imgWebpMap: { [key: string]: string } = {}
-const globalConfig: PluginOptions = JSON.parse(JSON.stringify(DEFAULT_CONFIG))
+const imgConvertMap: { [key: string]: string } = {}
+const globalConfig: InternalConfig = resolveInternalConfig(DEFAULT_CONFIG)
 /** Compressed image cache */
 export const compressCache: { [key: string]: Buffer } = {}
 
@@ -21,7 +23,8 @@ export function getGlobalConfig() {
 
 /** Set global configuration */
 export function setGlobalConfig(config: Partial<PluginOptions>) {
-  Object.assign(globalConfig, DEFAULT_CONFIG, config)
+  const resolved = resolveInternalConfig(config)
+  Object.assign(globalConfig, resolved)
   globalConfig.spritesConfig = Object.assign(
     {},
     DEFAULT_CONFIG.spritesConfig,
@@ -39,9 +42,25 @@ export function getImgWebpMap() {
   return imgWebpMap
 }
 
+/**
+ * @en Add generic image conversion mapping.
+ * @zh 添加通用格式转换映射。
+ */
+export function addImgConvertMap(fromName: string, toName: string) {
+  imgConvertMap[fromName] = toName
+}
+
+/**
+ * @en Read generic image conversion mapping.
+ * @zh 读取通用格式转换映射。
+ */
+export function getImgConvertMap() {
+  return imgConvertMap
+}
+
 /** Handle map of images to be converted to webp */
 export async function handleWebpImgMap(bundle: any) {
-  const { webpConfig } = getGlobalConfig()
+  const { convert } = getGlobalConfig()
   for (const key in bundle) {
     const chunk = bundle[key] as any
     const { base, ext } = parse(chunk.fileName)
@@ -60,16 +79,16 @@ export async function handleWebpImgMap(bundle: any) {
 
     // Limit webp size
     if (
-      webpConfig?.limitSize &&
+      convert?.limitSize &&
       source &&
-      source.length <= webpConfig?.limitSize
+      source.length <= convert?.limitSize
     ) {
       continue
     }
 
     // Webp filter function
-    if (webpConfig && webpConfig.filter) {
-      const { filter } = webpConfig
+    if (convert && convert.filter) {
+      const { filter } = convert
       let buildWebp = false
 
       for (let index = 0; index < originalFileNames.length; index++) {
@@ -144,6 +163,19 @@ export function handleReplaceWebp(str: string) {
     temp = temp.replace(new RegExp(key, 'g'), map[key])
   }
   return temp
+}
+
+/**
+ * @en Replace image names by generic conversion map.
+ * @zh 根据通用转换映射替换图片名称。
+ */
+export function handleReplaceConverted(str: string) {
+  const map = getImgConvertMap()
+  let next = str
+  for (const key in map) {
+    next = next.replace(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), map[key])
+  }
+  return next
 }
 
 /** Get cache key */

@@ -114,13 +114,12 @@ const devNoChangeFiles: string[] = []
  */
 export async function processImage(filePath: string) {
   const {
-    enableDevWebp,
+    enableDevConvert,
     quality,
-    enableWebp,
     cacheDir,
     sharpConfig,
     filter,
-    webpConfig
+    convert
   } = getGlobalConfig()
   const { ext, name } = parse(filePath)
 
@@ -130,35 +129,31 @@ export async function processImage(filePath: string) {
     return { buffer: file, type: ext.replace('.', '') }
   }
 
-  let buildWebp = false
-  if (enableDevWebp && !ext.includes(IMG_FORMATS_ENUM.webp) && !ext.includes(IMG_FORMATS_ENUM.gif)) {
-    if (webpConfig && webpConfig.filter) {
-      if (webpConfig.filter instanceof Function) {
-        if (isAsyncFunction(webpConfig.filter)) {
-          buildWebp = await webpConfig.filter(filePath)
-        } else {
-          buildWebp = webpConfig.filter(filePath)
-        }
-      }
+  const enableMainWebp = convert.enable && convert.format === IMG_FORMATS_ENUM.webp
+  let shouldConvertToMainFormat = false
+  if (enableDevConvert && enableMainWebp && !ext.includes(IMG_FORMATS_ENUM.webp) && !ext.includes(IMG_FORMATS_ENUM.gif)) {
+    if (convert.filter) {
+      shouldConvertToMainFormat = await convert.filter(filePath)
     } else {
-      buildWebp = true
+      shouldConvertToMainFormat = true
     }
   }
 
-  // 限制转webp的大小
+  // @en Conversion size threshold in dev mode.
+  // @zh 开发态格式转换大小阈值。
   const buffer = readFileSync(filePath)
   if (
-    enableDevWebp &&
-    buildWebp &&
+    enableDevConvert &&
+    shouldConvertToMainFormat &&
     buffer &&
-    webpConfig?.limitSize &&
-    buffer.length <= webpConfig.limitSize
+    convert?.limitSize &&
+    buffer.length <= convert.limitSize
   ) {
     return { buffer, type: ext.replace('.', '') }
   }
 
   const type =
-    enableDevWebp && buildWebp
+    enableDevConvert && shouldConvertToMainFormat
       ? IMG_FORMATS_ENUM.webp
       : (ext.replace('.', '') as ImgFormatType)
 
@@ -171,9 +166,9 @@ export async function processImage(filePath: string) {
     },
     {
       quality,
-      enableWebp,
+      enableConvert: enableMainWebp,
       sharpConfig,
-      enableDevWebp,
+      enableDevConvert,
       type,
       isFilter: !!filter
     }
@@ -217,10 +212,12 @@ export async function handleImgBundle(bundle: any) {
   for (const key in bundle) {
     const chunk = bundle[key] as any
     const { ext, base } = parse(key)
-    const { enableWebp, sharpConfig, compatibility, webpConfig } =
+    const { sharpConfig, compatibility, convert } =
       getGlobalConfig()
+    const enableMainWebp =
+      convert.enable && convert.format === IMG_FORMATS_ENUM.webp
 
-    if (/(js|css)$/.test(key) && enableWebp) {
+    if (/(js|css)$/.test(key) && enableMainWebp) {
       if (compatibility) {
         if (/(css)$/.test(key)) {
           chunk.source = await transformWebpExtInCss(chunk.source)
@@ -241,7 +238,7 @@ export async function handleImgBundle(bundle: any) {
     const format = ext.replace('.', '') as ImgFormatType
     const isSvg = format === IMG_FORMATS_ENUM.svg
     // Whether to convert to webp
-    const transformWebp = enableWebp && webpMap[parse(key).base]
+    const transformWebp = enableMainWebp && webpMap[parse(key).base]
     const originBuffer = chunk.source as any
 
     if (transformWebp) {
@@ -276,7 +273,7 @@ export async function handleImgBundle(bundle: any) {
     }
 
     // If converted to webp and not compatible, remove original image
-    const { deleteOriginImg } = webpConfig || {}
+    const { deleteOriginImg } = convert || {}
     if (transformWebp && !compatibility && deleteOriginImg) {
       delete bundle[key]
       continue

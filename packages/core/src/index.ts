@@ -6,7 +6,7 @@ import { processImage, handleImgBundle, handlePublicImg } from './compress'
 import {
     filterImage,
     setGlobalConfig,
-    handleWebpImgMap,
+    handleConvertImgMap,
     getGlobalConfig,
     handleReplaceWebp,
     compressCache,
@@ -28,8 +28,12 @@ export default function ImageTools(
 ): PluginOption {
     setGlobalConfig(options)
 
-    const { enableDevWebp, cacheDir, enableDev, compatibility, enableWebp } =
-        getGlobalConfig()
+    const {
+        enableDevConvert,
+        cacheDir,
+        enableDev,
+        compatibility
+    } = getGlobalConfig()
 
     let isBuild = false
     let viteConfig: UserConfig
@@ -105,10 +109,14 @@ export default function ImageTools(
             })
         },
         async transformIndexHtml(html) {
+            const globalConfig = getGlobalConfig()
+            const enableMainWebp =
+                globalConfig.convert.enable &&
+                globalConfig.convert.format === 'webp'
             if (
                 !compatibility ||
-                (isBuild && !enableWebp) ||
-                (!isBuild && enableDevWebp)
+                (isBuild && !enableMainWebp) ||
+                (!isBuild && enableDevConvert)
             ) {
                 return {
                     html,
@@ -142,25 +150,31 @@ export default function ImageTools(
         },
         async generateBundle(_options, bundle) {
             if (!isBuild) return
+            const globalConfig = getGlobalConfig()
+            const enableMainWebp =
+                globalConfig.convert.enable &&
+                globalConfig.convert.format === 'webp'
             await initOriginalFileNames(bundle, viteConfig)
             await initBundleStyles(bundle)
             await handleSpritesCssBundle(this, bundle)
-            if (enableWebp) {
-                await handleWebpImgMap(bundle)
+            if (globalConfig.convert.enable) {
+                await handleConvertImgMap(bundle)
             }
 
             await handleImgBundle(bundle)
         },
         async writeBundle(opt, bundle) {
-            const { enableWebp, compatibility, log, publicConfig } =
+            const { compatibility, log, publicConfig, convert } =
                 getGlobalConfig()
+            const enableMainWebp =
+                convert.enable && convert.format === 'webp'
             if (publicConfig && publicConfig.enable) {
                 await handlePublicImg(viteConfig)
             }
             if (log) {
                 printLog()
             }
-            if (!enableWebp) {
+            if (!enableMainWebp) {
                 return
             }
             for (const key in bundle) {

@@ -17,8 +17,12 @@ export const IMG_FORMATS_ENUM = {
 export const DEFAULT_CONFIG: PluginOptions = {
     quality: 80,
     enableDev: false,
-    enableDevWebp: false,
-    enableWebp: false,
+    enableDevConvert: false,
+    convert: {
+        enable: true,
+        format: 'webp',
+        deleteOriginImg: false
+    },
     includes: /\.(png|jpe?g|gif|webp|svg|avif)(\?.*)?$/i,
     excludes: '',
     cacheDir: 'node_modules/.cache/vite-plugin-image',
@@ -35,6 +39,11 @@ export const DEFAULT_CONFIG: PluginOptions = {
     compatibility: false,
     bodyWebpClassName: 'webp',
     filter: () => true,
+    perImage: async () => ({}),
+    cssGen: {
+        rules: [],
+        format: 'css'
+    },
     spritesConfig: {
         rules: [],
         suffix: 'sprites',

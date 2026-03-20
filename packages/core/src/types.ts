@@ -18,6 +18,8 @@ export type AnyObject = {
   [key: string | number | symbol]: any
 }
 
+export type PatternType = string | RegExp
+
 interface sharpConfigType {
   jpeg?: JpegOptions
   jpg?: JpegOptions
@@ -26,6 +28,75 @@ interface sharpConfigType {
   avif?: AvifOptions
   tiff?: TiffOptions
   gif?: GifOptions
+}
+
+export type ConvertConfig = {
+  /**
+   * @en Enable main-format conversion. Default true in 4.0.
+   * @zh 启用主格式转换。4.0 默认开启。
+   */
+  enable?: boolean
+  /**
+   * @en Main output format per image, default webp.
+   * @zh 单图主输出格式，默认 webp。
+   */
+  format?: SharpImgFormatType
+  /**
+   * @en Whether to delete origin image after conversion.
+   * @zh 转换后是否删除原图。
+   */
+  deleteOriginImg?: boolean
+  /**
+   * @en Skip conversion for files <= this size.
+   * @zh 文件小于等于该值时跳过转换。
+   */
+  limitSize?: number
+  /**
+   * @en Optional conversion filter for file path.
+   * @zh 单独转换过滤函数。
+   */
+  filter?: (path: string) => boolean | Promise<boolean>
+}
+
+export type PerImageConfig = {
+  /**
+   * @en Override quality for this image.
+   * @zh 覆盖当前图片的压缩质量。
+   */
+  quality?: number
+  /**
+   * @en Override main output format for this image.
+   * @zh 覆盖当前图片的主输出格式。
+   */
+  format?: SharpImgFormatType
+}
+
+export type PerImageResolver = (
+  filePath: string
+) => PerImageConfig | Promise<PerImageConfig>
+
+export type CssGenVariantRule = {
+  /**
+   * @en Regex for matching variant image filename.
+   * @zh 匹配变体图文件名的正则。
+   */
+  regex: RegExp
+  /**
+   * @en Pseudo selector, e.g. :hover or hover.
+   * @zh 伪类，例如 :hover 或 hover。
+   */
+  pseudo: string
+}
+
+export type CssGenRule = {
+  inputDir: string
+  stylePath: string
+  includes?: PatternType
+  excludes?: PatternType
+  filter?: (path: string) => boolean | Promise<boolean>
+  classPrefix?: string
+  resolveClass?: (filePath: string, baseName: string) => string
+  variantRules?: CssGenVariantRule[]
 }
 
 export type PluginOptions = {
@@ -42,28 +113,27 @@ export type PluginOptions = {
   enableDev: boolean
 
   /** 
-   * @en Whether to enable WebP in development environment
-   * @zh 是否在开发环境启用 WebP
+   * @en Whether to enable conversion in development environment
+   * @zh 是否在开发环境启用格式转换
    */
-  enableDevWebp: boolean
-
-  /** 
-   * @en Whether to enable WebP during build
-   * @zh 是否在构建时启用 WebP
+  enableDevConvert: boolean
+  /**
+   * @en Main-format conversion config (4.0).
+   * @zh 主格式转换配置（4.0）。
    */
-  enableWebp: boolean
+  convert?: ConvertConfig
 
   /** 
    * @en Include patterns
    * @zh 包含规则
    */
-  includes: string | RegExp
+  includes: PatternType
 
   /** 
    * @en Exclude patterns
    * @zh 排除规则
    */
-  excludes: string | RegExp
+  excludes: PatternType
 
   /** 
    * @en Development image cache directory, default: node_modules/.cache/vite-plugin-image
@@ -120,32 +190,11 @@ export type PluginOptions = {
    * @zh 图片路径
    */
   filter?: (path: string) => boolean
-
-  /** 
-   * @en Build WebP configuration
-   * @zh 构建 WebP 配置
+  /**
+   * @en Per-image resolver, controls quality + format only.
+   * @zh 单图配置解析器，仅控制质量与格式。
    */
-  webpConfig?: {
-    /**
-     * @en Filter function
-     * @zh 过滤函数
-     * @param path Image path
-     * @zh 图片路径
-     */
-    filter?: (path: string) => boolean
-
-    /** 
-     * @en Whether to delete original images
-     * @zh 是否删除原图
-     */
-    deleteOriginImg?: boolean
-
-    /** 
-     * @en File size limit, files <= this value will not be compressed or converted
-     * @zh 文件大小限制，小于等于此值的文件不会进行压缩或转换
-     */
-    limitSize?: number
-  }
+  perImage?: PerImageResolver
 
   /** 
    * @en Sprite image configuration
@@ -298,6 +347,14 @@ export type PluginOptions = {
    * @zh 是否为构建环境
    */
   isBuild?: boolean
+  /**
+   * @en CSS generation rules (implemented in milestone E).
+   * @zh CSS 生成功能规则（里程碑 E）。
+   */
+  cssGen?: {
+    rules: CssGenRule[]
+    format?: 'css'
+  }
 }
 
 export type ImgFormatType = keyof typeof IMG_FORMATS_ENUM
