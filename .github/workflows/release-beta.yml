@@ -42,35 +42,21 @@ jobs:
       - name: Build Packages
         run: pnpm -r --filter=vite-plugin-image-tools build
 
-      - name: Check for changesets
-        id: changesets
-        run: |
-          COUNT=$(find .changeset -maxdepth 1 -name "*.md" -not -name "README.md" 2>/dev/null | wc -l)
-          echo "has_changesets=$([ "$COUNT" -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
-
       - name: Enter prerelease mode
-        if: steps.changesets.outputs.has_changesets == 'true'
         run: pnpm changeset pre enter beta
 
       - name: Version (prerelease)
-        if: steps.changesets.outputs.has_changesets == 'true'
         run: pnpm changeset version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Commit version bump
-        if: steps.changesets.outputs.has_changesets == 'true'
         run: |
           git add .
           git diff --staged --quiet || (git commit -m "[ci] Version Packages (beta)" && git push)
 
       - name: Publish Beta
-        if: steps.changesets.outputs.has_changesets == 'true'
         run: pnpm changeset publish --tag beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: No changesets
-        if: steps.changesets.outputs.has_changesets != 'true'
-        run: echo "No unreleased changesets found, skipping version and publish."
