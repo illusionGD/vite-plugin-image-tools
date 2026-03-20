@@ -45,18 +45,19 @@ jobs:
       - name: Enter prerelease mode
         run: pnpm changeset pre enter beta
 
-      - name: Version (prerelease)
-        run: pnpm changeset version
+      - name: Setup Changesets
+        uses: changesets/action@v1
+        with:
+          version: pnpm changeset version
+          commit: "[ci] Version Packages"
+          title: "Version Packages (GitHub Actions)"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Commit version bump
-        run: |
-          git add .
-          git diff --staged --quiet || (git commit -m "[ci] Version Packages (beta)" && git push)
-
-      - name: Publish Beta
-        run: pnpm changeset publish --tag beta
+      - name: Publish Packages
+        run: pnpm changeset publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Exit prerelease mode
+        run: pnpm changeset pre exit
