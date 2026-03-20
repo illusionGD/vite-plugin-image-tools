@@ -5,6 +5,7 @@ on:
     paths:
       - 'packages/**'
       - '.changeset/**'
+      - '.github/workflows/release-beta.yml'
 
 jobs:
   release-beta:
