@@ -1,5 +1,9 @@
 # vite-plugin-image-tools
 
+<p align="center">
+  <img src="https://cdn-fusion.imgcdn.store/i/2026/e58943ee633e97e8.png" alt="vite-plugin-image-tools logo" width="120" />
+</p>
+
 [![License MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **English** | [中文](./README.zh.md)
