@@ -6,6 +6,8 @@
 
 A Vite plugin for image compression, format conversion (WebP/AVIF), sprite sheet generation, and CSS class generation.
 
+> 📚 **v3.x 及更早版本文档**： [English](./docs/README-v3.md) | [中文](./docs/README-v3.zh.md)
+
 ## Notice
 
 Vite 6 and earlier (Rollup-based Vite).

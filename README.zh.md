@@ -6,6 +6,8 @@
 
 Vite 图片处理插件：压缩、格式转换（WebP/AVIF）、精灵图合并、CSS 类自动生成。
 
+> 📚 **v3.x 及更早版本文档**：[English](./docs/README-v3.md) | [中文](./docs/README-v3.zh.md)
+
 ## 特性
 
 - **压缩**：生产与开发环境图片压缩
