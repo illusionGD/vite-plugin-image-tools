@@ -1,85 +1,277 @@
-
-
 <template>
-  <div>
-    <div>
-      <div class="icon-test"></div>
-    </div>
-    <div class="base64-img"></div>
-    <div class="svg-icon"></div>
-    <a
-      target="_blank"
-      class="twitter-share-button"
-      href="https://twitter.com/intent/tweet?text=Hello%20world&url=https://mc-carnival.kurogames-global.com/"
-    >Tweet</a>
-    <!-- <img src="./assets/image.png" alt=""> -->
-    <div class="test-css-img">
-      <div class="img-test"></div>
-    </div>
-    <img :src="img" />
-    <div class="zh-img"></div>
+  <div class="demo">
+    <header class="demo-header">
+      <h1>Vite Image Tools 测试用例</h1>
+      <p class="demo-desc">convert / perImage / sprites / cssGen (build + dev watcher)</p>
+    </header>
+
+    <section class="demo-section">
+      <h2>1. Import 导入</h2>
+      <p class="section-desc">import.jpg → perImage 转为 avif</p>
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-label">import 导入</div>
+          <img :src="importImg" alt="import" class="img-preview" />
+        </div>
+      </div>
+    </section>
+
+    <section class="demo-section">
+      <h2>2. CSS background-image</h2>
+      <p class="section-desc">url() 引用，convert 转 webp</p>
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-label">image.png</div>
+          <div class="img-bg img-bg--image"></div>
+        </div>
+        <div class="card">
+          <div class="card-label">css.jpg (perImage quality: 50)</div>
+          <div class="img-bg img-bg--css"></div>
+        </div>
+        <div class="card">
+          <div class="card-label">base64.png</div>
+          <div class="img-bg img-bg--base64"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="demo-section">
+      <h2>3. 精灵图 Sprites</h2>
+      <p class="section-desc">icons 目录合并为 icons-sprites.png</p>
+      <div class="card-grid card-grid--icons">
+        <div class="card">
+          <div class="card-label">icon.png</div>
+          <div class="sprite-icon sprite-icon--default"></div>
+        </div>
+        <div class="card">
+          <div class="card-label">icon_hover.png (:hover)</div>
+          <div class="sprite-icon sprite-icon--hover"></div>
+        </div>
+        <div class="card">
+          <div class="card-label">1.png</div>
+          <div class="sprite-icon sprite-icon--1"></div>
+        </div>
+        <div class="card">
+          <div class="card-label">2.png</div>
+          <div class="sprite-icon sprite-icon--2"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="demo-section">
+      <h2>4. cssGen 自动类</h2>
+      <p class="section-desc">根据 assets 自动生成的 CSS 类</p>
+      <div class="card-grid card-grid--small">
+        <div class="card" v-for="cls in cssGenClasses" :key="cls">
+          <div class="card-label">{{ cls }}</div>
+          <div :class="['cssgen-box', cls]"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="demo-section">
+      <h2>5. SVG</h2>
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-label">large-image.svg</div>
+          <div class="img-bg img-bg--svg"></div>
+        </div>
+        <div class="card">
+          <div class="card-label">vue.svg</div>
+          <div class="img-bg img-bg--vue"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="demo-section">
+      <h2>6. 中文文件名</h2>
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-label">图片_2.jpg</div>
+          <div class="img-bg img-bg--zh"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="demo-section">
+      <h2>7. HTML img 标签</h2>
+      <p class="section-desc">index.html 中直接引用</p>
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-label">html.jpg</div>
+          <img src="./assets/html.jpg" alt="html" class="img-preview" />
+        </div>
+      </div>
+    </section>
   </div>
 </template>
+
 <script setup>
-import img from './assets/import.jpg'
-console.log("🚀 ~ img:", img)
+import importImg from './assets/import.jpg'
+const cssGenClasses = ['ui-1', 'ui-2', 'ui-3', 'ui-4', 'ui-5', 'ui-icon', 'ui-base64']
 </script>
+
 <style scoped lang="scss">
-// @use '@/assets/mixin.scss';
-
-$color: #fff;
-.zh-img {
-    background-image: url('./assets/图片_2.jpg');
-    height: 200px;
-    width: 100%;
-    position: absolute;
+.demo {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem;
 }
 
-.base64-img {
-  width: 40px;
-  height: 40px;
-  background-image: url('./assets/base64.png');
-}
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em $color);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
-.test-css-img {
-  background-image: url('./assets/image.png');
-  .img-test {
-    background-image: url('./assets/css.jpg');
-    width: 1146px;
-    height: 717px;
+.demo-header {
+  margin-bottom: 2.5rem;
+  text-align: center;
+
+  h1 {
+    font-size: 1.75rem;
+    margin: 0 0 0.5rem;
   }
 }
-.svg-icon {
-  width: 200px;
-  aspect-ratio: 1;
+
+.demo-desc {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #b8b8b8;
+}
+
+.demo-section {
+  margin-bottom: 2.5rem;
+
+  h2 {
+    font-size: 1.1rem;
+    margin: 0 0 0.25rem;
+    color: #8b9cff;
+  }
+}
+
+.section-desc {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+  color: #a8a8a8;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.card-grid--icons {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
+.card-grid--small {
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.card-label {
+  font-size: 0.75rem;
+  color: #c4c4c4;
+  text-align: center;
+  word-break: break-all;
+}
+
+.img-preview {
+  max-width: 100%;
+  max-height: 120px;
+  object-fit: contain;
+}
+
+.img-bg {
+  width: 80px;
+  height: 80px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.img-bg--image {
+  background-image: url('./assets/image.png');
+}
+
+.img-bg--css {
+  background-image: url('./assets/css.jpg');
+}
+
+.img-bg--base64 {
+  background-image: url('./assets/base64.png');
+}
+
+.img-bg--svg {
   background-image: url('./assets/large-image.svg');
 }
 
-.icon-test {
+.img-bg--vue {
+  background-image: url('./assets/vue.svg');
+}
+
+.img-bg--zh {
+  background-image: url('./assets/图片_2.jpg');
+}
+
+.sprite-icon {
   width: 56px;
   height: 68px;
   background-size: contain;
   background-repeat: no-repeat;
-  background-image: url('./assets/icons/1.png');
+  background-position: center;
+}
+
+.sprite-icon--default {
+  background-image: url('./assets/icons/icon.png');
+}
+
+.sprite-icon--hover {
+  background-image: url('./assets/icons/icon.png');
   &:hover {
-    background-image: url('./assets/icons/2.png');
+    background-image: url('./assets/icons/icon_hover.png');
+  }
+}
+
+.sprite-icon--1 {
+  background-image: url('./assets/icons/1.png');
+}
+
+.sprite-icon--2 {
+  background-image: url('./assets/icons/2.png');
+}
+
+.cssgen-box {
+  width: 56px;
+  height: 56px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+@media (prefers-color-scheme: light) {
+  .card {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.08);
   }
 
-  @for $i from 2 through 3 {
-        &:nth-child(#{$i}) {
-            background-image: url('./assets/icons/3.png');
-        }
-    }
+  .card-label {
+    color: #444;
+  }
+
+  .section-desc,
+  .demo-desc {
+    color: #555;
+  }
+
+  .demo-section h2 {
+    color: #4a5dcc;
+  }
 }
 </style>

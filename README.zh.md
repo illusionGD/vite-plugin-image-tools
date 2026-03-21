@@ -1,29 +1,30 @@
 # vite-plugin-image-tools
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-vite插件，打包压缩图片，支持转wbep，支持合并精灵图
+[English](./README.md) | **中文**
 
-## 注意
-vite@6及以下版本，也就是vite的rollup版本
+Vite 图片处理插件：压缩、格式转换（WebP/AVIF）、精灵图合并、CSS 类自动生成。
+
+> 📚 **v3.x 及更早版本文档**：[English](./docs/README-v3.md) | [中文](./docs/README-v3.zh.md)
 
 ## 特性
 
-🚀 功能
-
-- 支持生产环境压缩和生成webp图片
-- 支持开发环境压缩和预览webp图片效果
-- 支持配置图片压缩质量
-- 自动合并精灵图
+- **压缩**：生产与开发环境图片压缩
+- **格式转换**：通过 `convert` 配置主输出格式（WebP、AVIF 等）
+- **perImage**：单图质量与格式覆盖
+- **精灵图**：合并图片为雪碧图；开发时监听源图变化自动重建
+- **cssGen**：根据图片目录自动生成 CSS 类（支持变体如 `:hover`）
+- **兼容模式**：仅对 CSS 背景图做 WebP 检测与转换
 
 ## 安装
 
 ```bash
-# npm
 npm i -D vite-plugin-image-tools
-
-# pnpm
+# 或
 pnpm i -D vite-plugin-image-tools
+# 或
+yarn add -D vite-plugin-image-tools
 ```
 
 ## 使用
@@ -34,182 +35,219 @@ import { defineConfig } from 'vite'
 import VitePluginImageTools from 'vite-plugin-image-tools'
 
 export default defineConfig({
-    plugins: [
-        VitePluginImageTools({
-            quality: 80
-        })
-    ]
+  plugins: [
+    VitePluginImageTools({
+      quality: 90,
+      enableDev: true,
+      enableDevConvert: true
+    })
+  ]
 })
 ```
 
-# 配置参数
+## 详细配置示例
 
-| 参数                | 类型               | 默认值                                                                                                                                      | Description                                                                                        |
-| ----------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| quality           | number           | 80                                                                                                                                       | 图片质量 (1-100)                                                                                       |
-| includes          | string/RegExp    | ''                                                                                                                                       | 包含，如：`‘xxx.png'.includs(inclouds) includes.test('xxx.png')`                                        |
-| excludes          | string/RegExp    | ''                                                                                                                                       | 排除项，如：`!'xxx.png'.includs(excludes) !includes.test('xxx.png')`                                     |
-| filter            | function<string> | () => true                                                                                                                               | 过滤方法，可自定义过滤图片逻辑，支持async<br/>参数：图片路径<br/>如：<br/>filter: (path) => {  return path.includes('.png') } |
-| limitSize         | number           | 无                                                                                                                                        | 文件大小限制，<=这个值不做任何压缩转换处理                                                                             |
-| compatibility     | boolean          | false                                                                                                                                    | 是否兼容低版本浏览器，生产环境生效，<br/>true：只有css中的图片会转webp（暂时只支持打包时候处理css）<br/> false：全部转webp                     |
-| bodyWebpClassName | string           | webp                                                                                                                                     | body标签的webp class，用于生成兼容webp的class                                                                 |
-| enableWebp        | boolean          | false                                                                                                                                    | 生产环境是否转webp                                                                                        |
-| enableDev         | boolean          | false                                                                                                                                    | 开发环境是否开启压缩                                                                                         |
-| enableDevWebp     | boolean          | false                                                                                                                                    | 开发环境是否开启转webp                                                                                      |
-| cacheDir          | string           | ‘node_modules/.cache/vite-plugin-image’                                                                                                  | 缓存路径， 默认，只在开发环境生效                                                                                  |
-| spritesConfig     | Object           |                                                                                                                                          | 精灵图配置                                                                                              |
-| webpConfig        | Object           |                                                                                                                                          | 转换webp配置                                                                                           |
-| sharpConfig       | Object           | { jpeg?: JpegOptions, jpg?: JpegOptions, png?: PngOptions, webp?: WebpOptions, avif?: AvifOptions, tiff?: TiffOptions, gif?: GifOptions} | [sharp配置](https://sharp.pixelplumbing.com/api-output/#_top)                                        |
-| svgoConfig        | Object           | {plugins:['preset-default',{name:'removerXMLNS'},{name:'removeViewBox'}],js2svg:{indent:2, pretty: true}}                                | [https://svgo.dev/docs/preset-default/]()                                                          |
-| publicConfig      | Object           |                                                                                                                                          | public下的图片打包配置，如：publicConfig: {enable: true,quality: 80,}                                         |
-| imgAssetsDir      | string/string[]  |                                                                                                                                          | 图片资源文件夹，兼容vite@4.x版本找不到原图路径问题；vite@4.x必填                                                           |
-| log               | boolean          |                                                                                                                                          | 是否打印输出日志，默认true                                                                                    |
+完整功能配置示例：
 
-# 配置
+```js
+// vite.config.js
+import { defineConfig } from 'vite'
+import VitePluginImageTools from 'vite-plugin-image-tools'
 
-## quality
+export default defineConfig({
+  plugins: [
+    VitePluginImageTools({
+      // 基础
+      quality: 90,
+      enableDev: true,
+      enableDevConvert: true,
+      compatibility: true,
 
-图片压缩质量，取值范围：1-100，全局配置，如果sharpConfig有单独配置，则不生效
+      // 格式转换
+      convert: {
+        enable: true,
+        format: 'webp',
+        deleteOriginImg: false,
+        limitSize: 2 * 1024
+      },
 
-## includes
+      // 单图覆盖
+      perImage: async (filePath) => {
+        if (filePath.includes('hero.jpg')) return { format: 'avif', quality: 60 }
+        if (filePath.includes('thumb')) return { quality: 50 }
+        return {}
+      },
 
-包含配置，过滤图片，支持配置字符串和正则，如：`‘xxx.png'.includs(inclouds) includes.test('xxx.png')`
+      // Sharp 各格式选项
+      sharpConfig: {
+        webp: { quality: 80 },
+        avif: { quality: 60 }
+      },
 
-## excludes
+      // 精灵图
+      spritesConfig: {
+        rules: [
+          {
+            dir: './src/assets/icons',
+            name: 'icons',
+            outputDir: './src/assets',
+            algorithm: 'binary-tree'
+          }
+        ],
+        rootValue: 16
+      },
 
-排除配置，过滤图片，支持配置字符串和正则，如：`!'xxx.png'.includs(excludes) !includes.test('xxx.png')`
+      // 自动生成 CSS 类
+      cssGen: {
+        rules: [
+          {
+            inputDir: './src/assets/icons',
+            stylePath: 'assets/generated/image-classes.css',
+            classPrefix: 'ui--',
+            variantRules: [{ regex: /_hover$/, pseudo: ':hover' }]
+          },
+          {
+            inputDir: './src/assets',
+            stylePath: 'assets/generated/image-classes.css',
+            includes: /\.(png|jpe?g)$/i,
+            excludes: /icons\//
+          }
+        ]
+      },
 
-## filter
+      // 压缩 public/ 目录图片
+      publicConfig: {
+        enable: true,
+        quality: 80
+      }
+    })
+  ]
+})
+```
 
-全局过滤函数，接收path图片路径，返回boolean，支持异步函数
+## 配置参数
 
-## enableWebp
+| 参数                | 类型               | 默认值                                                       | 说明                                                         |
+| ------------------- | ------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| quality             | number             | 80                                                           | 全局压缩质量 (1–100)                                         |
+| enableDev           | boolean            | false                                                        | 开发环境是否启用压缩                                         |
+| enableDevConvert    | boolean            | false                                                        | 开发环境是否启用格式转换                                     |
+| convert             | object             | `{ enable: true, format: 'webp', deleteOriginImg: false }`    | 主格式转换配置                                               |
+| perImage            | function           | `async () => ({})`                                           | 单图质量/格式覆盖解析器                                      |
+| includes            | string / RegExp    | `/\.(png\|jpe?g\|gif\|webp\|svg\|avif)(\?.*)?$/i`            | 包含规则                                                    |
+| excludes            | string / RegExp    | `''`                                                         | 排除规则                                                     |
+| filter              | function           | `() => true`                                                 | 自定义过滤（支持 async）                                    |
+| limitSize           | number             | -                                                            | 小于等于该值的文件跳过压缩/转换                              |
+| compatibility       | boolean            | false                                                        | WebP 兼容模式（仅 CSS 图片）                                 |
+| bodyWebpClassName   | string             | `'webp'`                                                     | 检测到 WebP 支持时添加到 body 的类名                         |
+| cacheDir            | string             | `node_modules/.cache/vite-plugin-image`                       | 开发环境缓存目录                                             |
+| spritesConfig       | object             | -                                                            | 精灵图配置                                                   |
+| cssGen              | object             | `{ rules: [], format: 'css' }`                               | CSS 类生成规则                                              |
+| sharpConfig         | object             | `{}`                                                         | Sharp 配置（jpeg、png、webp、avif 等）                       |
+| svgoConfig          | object             | preset-default + removerXMLNS、removeViewBox                 | SVGO 配置                                                    |
+| publicConfig        | object             | -                                                            | `public/` 目录图片配置                                       |
+| imgAssetsDir        | string / string[]  | -                                                            | 图片资源目录（兼容 Vite 4.x）                                |
+| log                 | boolean            | true                                                         | 是否打印输出日志                                             |
 
-是否开始打包webp图片，默认false，开启的话，会同时生成webp图片，自动修改图片后缀（如：xxx.png -> xxx.webp），受过滤配置影响（filter、includes、excludes）。
+## 配置说明
 
-注意：开启后，全部符合条件的图片都会转webp，低端机可能不支持webp，酌情考虑是否开启
+### convert
 
-## webpConfig
+主格式转换（4.0+）：
 
-打包webp相关配置：
-
-```json
-{
-        /**
-         * 过滤函数
-         * @param path 图片路径
-         */
-        filter?: (path: string) => boolean,
-        /**
-        *是否删除原图，默认false-打包不会删除原图，如果要减少产物体积可设置true
-        */
-        deleteOriginImg?: boolean,
-        /** 文件大小限制，<=这个值不做任何压缩转换处理 */
-        limitSize?: number
+```js
+convert: {
+  enable: true,
+  format: 'webp',        // 或 'avif'、'png' 等
+  deleteOriginImg: false,
+  limitSize: 2048,       // 小文件跳过转换
+  filter: (path) => true
 }
 ```
 
-## compatibility
+### perImage
 
-是否开启兼容webp模式，默认false，
+按图片覆盖质量或格式：
 
-开启后，会在head标签插入判断设备webp兼容性的异步代码，动态全局替换webp的class，目前只支持兼容css中的bg图片，其他图片（如：img标签）不会转webp
+```js
+perImage: async (filePath) => {
+  if (filePath.includes('hero.jpg')) return { format: 'avif', quality: 60 }
+  if (filePath.includes('thumb')) return { quality: 50 }
+  return {}
+}
+```
 
-注意：ios可能并不兼容head里异步请求，会导致webp和原图都加载，酌情考虑是否开启
+### spritesConfig
 
-## enableDev
+将目录内图片合并为精灵图：
 
-是否开发环境生效，默认false
-
-开启后，开发环境也能自动打包压缩图片
-
-## enableDevWebp
-
-是否开发环境启用转webp功能，默认false
-
-开启后，开发环境也能自动转webp
-
-## cacheDir
-
-开发环境图片缓存路径，默认：‘node_modules/.cache/vite-plugin-image’
-
-避免开发时重复压缩，优化开发体验
-
-## spritesConfig
-
-精灵图配置：开启后，可以将文件夹下的图片合并成一张精灵图，并自动修改css中的背景图size、position、repeat
-
-```json
-{
-        rules: {
-            /** 文件夹 */
-            dir: string
-            /** 后缀，默认sprites */
-            suffix?: string
-            padding?: number
-            /** 压缩质量 */
-            quality?: number
-            /** css缩放 */
-            scale?: number
-            algorithm?:
-                | 'top-down'
-                | 'left-right'
-                | 'diagonal'
-                | 'alt-diagonal'
-                | 'binary-tree'
-        }[]
-        /**
-         * 精灵图输出文件夹
-         */
-        outputDir: string
-        /**
-        *是否删除原图，默认false-打包不会删除原图，如果要减少产物体积可设置true
-        */
-        deleteOriginImg?: boolean,
-        /** 包含 */
-        includes?: string | RegExp
-        /** 排除 */
-        excludes?: string | RegExp
-        /** 后缀，默认sprites */
-        suffix?: string
-        algorithm?:
-            | 'top-down'
-            | 'left-right'
-            | 'diagonal'
-            | 'alt-diagonal'
-            | 'binary-tree'
-        /**
-         * 单位转换
-         * @param unit 单位px
-         * @param filePath 单张图片的路径
-         * @returns
-         */
-        transformUnit?: (unit: string, filePath: string) => string
-        /**
-         *rootValue，rem的转换单位
-         */
-        rootValue?: number
+```js
+spritesConfig: {
+  rules: [
+    {
+      dir: './src/assets/icons',
+      name: 'icons',             // 可选，默认：dir 名称 + '-sprites'
+      outputDir: './src/assets', // 可选，默认与 dir 相同
+      padding: 0,
+      algorithm: 'binary-tree'   // top-down | left-right | diagonal | alt-diagonal | binary-tree
     }
-```
-
-注意：使用该功能，css中的width、height要填写具体数值(px | rem)（不能是%），不然会以原图片宽高去计算并修改size、position、repeat属性；使用rem要设置`rootValue` ，用于计算转换px
-
-## sharpConfig
-
-sharp压缩配置: [sharp配置](https://sharp.pixelplumbing.com/api-output/#_top)
-
-```json
-{
-    jpeg?: JpegOptions
-    jpg?: JpegOptions
-    png?: PngOptions
-    webp?: WebpOptions
-    avif?: AvifOptions
-    tiff?: TiffOptions
-    gif?: GifOptions
+  ],
+  outputDir: './dist/sprites',
+  includes: /\.(png|jpg)$/,
+  excludes: /\.(svg)$/,
+  rootValue: 16,
+  deleteOriginImg: false
 }
 ```
 
-## svgoConfig
+**开发监听**：`enableDev` 为 true 时，插件会监听精灵图源目录。当图片增删改时，会重建精灵图、失效模块缓存并触发整页刷新。
 
-svgo配置：https://svgo.dev/docs/preset-default/
+**注意**：CSS 中的 `width`、`height` 需为具体数值（px 或 rem），不能为 `%`。
+
+### cssGen
+
+根据图片目录自动生成 CSS 类：
+
+```js
+cssGen: {
+  rules: [
+    {
+      inputDir: './src/assets/icons',
+      stylePath: 'assets/generated/image-classes.css',
+      classPrefix: 'ui--',
+      includes: /\.(png|jpg)$/,
+      excludes: /\.(svg)$/,
+      variantRules: [
+        { regex: /_hover$/, pseudo: ':hover' }
+      ],
+      resolveClass: (filePath, baseName) => `ui--${baseName}`
+    }
+  ]
+}
+```
+
+**开发监听**：源图变化时重新生成 CSS 并触发整页刷新。
+
+### compatibility
+
+为 `true` 时，插入脚本检测 WebP 支持，仅对 CSS 背景图做转换。适用于需兼容不支持 WebP 的浏览器场景。
+
+### enableDev / enableDevConvert
+
+- `enableDev`：开发环境启用压缩，默认：false
+- `enableDevConvert`：开发环境启用格式转换（默认转 webp），默认：false
+
+### sharpConfig
+
+[Sharp 输出配置](https://sharp.pixelplumbing.com/api-output/)：
+
+```js
+sharpConfig: {
+  webp: { quality: 80 },
+  avif: { quality: 60 }
+}
+```
+
+### svgoConfig
+
+[SVGO preset-default](https://svgo.dev/docs/preset-default/)

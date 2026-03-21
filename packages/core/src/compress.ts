@@ -1,12 +1,12 @@
 import path, { join, parse } from 'path'
 import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from './constants'
 import {
-  handleReplaceWebp,
+  handleReplaceConverted,
   getCacheKey,
   getGlobalConfig,
-  replaceWebpExt,
+  replaceExt,
   filterChunkImage,
-  getImgWebpMap,
+  getImgConvertMap,
   isAsyncFunction,
   compressCache,
   filterImage
@@ -19,7 +19,7 @@ import type {
   SharpImgFormatType,
   SharpOptionsType
 } from './types'
-import { transformWebpExtInCss } from './transform'
+import { transformExtInCss } from './transform'
 import { logSize } from './log'
 import { UserConfig } from 'vite'
 import { cwd } from 'process'
@@ -114,15 +114,18 @@ const devNoChangeFiles: string[] = []
  */
 export async function processImage(filePath: string) {
   const {
-    enableDevWebp,
+    enableDevConvert,
     quality,
-    enableWebp,
     cacheDir,
     sharpConfig,
     filter,
-    webpConfig
+    convert,
+    perImage
   } = getGlobalConfig()
   const { ext, name } = parse(filePath)
+  const single = await perImage(filePath)
+  const singleQuality = single?.quality || quality
+  const targetFormat = single?.format || convert.format || IMG_FORMATS_ENUM.webp
 
   // Read file path that should not be converted, return original image data
   if (devNoChangeFiles.includes(filePath)) {
@@ -130,36 +133,32 @@ export async function processImage(filePath: string) {
     return { buffer: file, type: ext.replace('.', '') }
   }
 
-  let buildWebp = false
-  if (enableDevWebp && !ext.includes(IMG_FORMATS_ENUM.webp) && !ext.includes(IMG_FORMATS_ENUM.gif)) {
-    if (webpConfig && webpConfig.filter) {
-      if (webpConfig.filter instanceof Function) {
-        if (isAsyncFunction(webpConfig.filter)) {
-          buildWebp = await webpConfig.filter(filePath)
-        } else {
-          buildWebp = webpConfig.filter(filePath)
-        }
-      }
+  const enableMainWebp = convert.enable && targetFormat === IMG_FORMATS_ENUM.webp
+  let shouldConvertToMainFormat = false
+  if (enableDevConvert && !ext.includes(`.${targetFormat}`) && !ext.includes(IMG_FORMATS_ENUM.gif)) {
+    if (convert.filter) {
+      shouldConvertToMainFormat = await convert.filter(filePath)
     } else {
-      buildWebp = true
+      shouldConvertToMainFormat = true
     }
   }
 
-  // 限制转webp的大小
+  // @en Conversion size threshold in dev mode.
+  // @zh 开发态格式转换大小阈值。
   const buffer = readFileSync(filePath)
   if (
-    enableDevWebp &&
-    buildWebp &&
+    enableDevConvert &&
+    shouldConvertToMainFormat &&
     buffer &&
-    webpConfig?.limitSize &&
-    buffer.length <= webpConfig.limitSize
+    convert?.limitSize &&
+    buffer.length <= convert.limitSize
   ) {
     return { buffer, type: ext.replace('.', '') }
   }
 
   const type =
-    enableDevWebp && buildWebp
-      ? IMG_FORMATS_ENUM.webp
+    enableDevConvert && shouldConvertToMainFormat
+      ? targetFormat
       : (ext.replace('.', '') as ImgFormatType)
 
   const file = readFileSync(filePath)
@@ -170,10 +169,10 @@ export async function processImage(filePath: string) {
       content: file
     },
     {
-      quality,
-      enableWebp,
+      quality: singleQuality,
+      enableConvert: enableMainWebp,
       sharpConfig,
-      enableDevWebp,
+      enableDevConvert,
       type,
       isFilter: !!filter
     }
@@ -188,7 +187,9 @@ export async function processImage(filePath: string) {
   const newBuffer = await pressBufferToImage(
     buffer,
     type,
-    sharpConfig[type as SharpImgFormatType]
+    Object.assign({}, sharpConfig[type as SharpImgFormatType], {
+      quality: singleQuality
+    })
   )
   
 
@@ -212,24 +213,30 @@ export async function processImage(filePath: string) {
 
 /** Process image bundle, compress & convert to webp */
 export async function handleImgBundle(bundle: any) {
-  const webpMap = getImgWebpMap()
+  const convertMap = getImgConvertMap()
 
   for (const key in bundle) {
     const chunk = bundle[key] as any
     const { ext, base } = parse(key)
-    const { enableWebp, sharpConfig, compatibility, webpConfig } =
+    const { sharpConfig, compatibility, convert, perImage, quality } =
       getGlobalConfig()
+    const sourcePath = chunk.originalFileNames?.[0] || chunk.fileName || key
+    const single = await perImage(join(cwd(), sourcePath))
+    const singleQuality = single?.quality || quality
+    const targetFormat = single?.format || convert.format || IMG_FORMATS_ENUM.webp
+    const enableMainWebp =
+      convert.enable && targetFormat === IMG_FORMATS_ENUM.webp
 
-    if (/(js|css)$/.test(key) && enableWebp) {
+    if (/(js|css)$/.test(key) && enableMainWebp) {
       if (compatibility) {
         if (/(css)$/.test(key)) {
-          chunk.source = await transformWebpExtInCss(chunk.source)
+          chunk.source = await transformExtInCss(chunk.source, targetFormat)
         }
       } else {
         if (/(js)$/.test(key)) {
-          chunk.code = handleReplaceWebp(chunk.code)
+          chunk.code = handleReplaceConverted(chunk.code)
         } else if (/(css)$/.test(key)) {
-          chunk.source = handleReplaceWebp(chunk.source)
+          chunk.source = handleReplaceConverted(chunk.source)
         }
       }
     }
@@ -240,34 +247,38 @@ export async function handleImgBundle(bundle: any) {
 
     const format = ext.replace('.', '') as ImgFormatType
     const isSvg = format === IMG_FORMATS_ENUM.svg
-    // Whether to convert to webp
-    const transformWebp = enableWebp && webpMap[parse(key).base]
+    // Whether to convert to target format
+    const transformTarget = !!convertMap[parse(key).base]
     const originBuffer = chunk.source as any
 
-    if (transformWebp) {
+    if (transformTarget) {
       try {
-        const webpName = replaceWebpExt(key)
-        const webpChunk = deepClone(chunk)
-        const webpBuffer =
-          compressCache[webpName] ||
+        const convertedName = convertMap[parse(key).base]
+          ? key.replace(parse(key).base, convertMap[parse(key).base])
+          : replaceExt(key, targetFormat)
+        const convertedChunk = deepClone(chunk)
+        const convertedBuffer =
+          compressCache[convertedName] ||
           (await pressBufferToImage(
-            webpChunk.source,
-            IMG_FORMATS_ENUM.webp,
-            sharpConfig[IMG_FORMATS_ENUM.webp]
+            convertedChunk.source,
+            targetFormat,
+            Object.assign({}, sharpConfig[targetFormat], {
+              quality: singleQuality
+            })
           ))
 
-        webpChunk.source = webpBuffer
-        webpChunk.fileName = webpName
-        bundle[webpName] = webpChunk
+        convertedChunk.source = convertedBuffer
+        convertedChunk.fileName = convertedName
+        bundle[convertedName] = convertedChunk
         // Cache
-        compressCache[webpName] = webpChunk.source
+        compressCache[convertedName] = convertedChunk.source
 
-        if (!compressCache[webpName]) {
+        if (!compressCache[convertedName]) {
           logSize.push({
             fileName: base,
-            webpName: replaceWebpExt(base),
+            webpName: parse(convertedName).base,
             originSize: originBuffer.length,
-            compressSize: webpBuffer.length
+            compressSize: convertedBuffer.length
           })
         }
       } catch (error) {
@@ -276,8 +287,8 @@ export async function handleImgBundle(bundle: any) {
     }
 
     // If converted to webp and not compatible, remove original image
-    const { deleteOriginImg } = webpConfig || {}
-    if (transformWebp && !compatibility && deleteOriginImg) {
+    const { deleteOriginImg } = convert || {}
+    if (transformTarget && !compatibility && deleteOriginImg) {
       delete bundle[key]
       continue
     }
@@ -291,7 +302,11 @@ export async function handleImgBundle(bundle: any) {
       }
       const pressBuffer = isSvg
         ? await compressSvg(chunk.source)
-        : await pressBufferToImage(originBuffer, format, sharpConfig[format])
+        : await pressBufferToImage(
+            originBuffer,
+            format,
+            Object.assign({}, sharpConfig[format], { quality: singleQuality })
+          )
 
       // Compare size before and after compression, do not replace if compressed is larger
       if (originBuffer.length > pressBuffer.length) {

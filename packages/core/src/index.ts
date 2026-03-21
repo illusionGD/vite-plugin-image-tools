@@ -6,30 +6,37 @@ import { processImage, handleImgBundle, handlePublicImg } from './compress'
 import {
     filterImage,
     setGlobalConfig,
-    handleWebpImgMap,
+    handleConvertImgMap,
     getGlobalConfig,
-    handleReplaceWebp,
+    handleReplaceConverted,
     compressCache,
     isCssFile
 } from './utils'
 import type { PluginOptions } from './types'
-import { transformWebpExtInHtml } from './transform'
+import { transformExtInHtml } from './transform'
 import {
     handleSpriteCss,
     handleSpritesCssBundle,
     initBundleStyles,
     initOriginalFileNames,
-    initSprite
+    initSprite,
+    clearSpriteCache,
+    getSpriteDevWatchInfo
 } from './sprites'
 import { printLog } from './log'
+import { generateCssArtifacts, generateCssArtifactsForDev } from './css-gen'
 
 export default function ImageTools(
     options: Partial<Omit<PluginOptions, 'viteConfig' | 'isBuild'>> = {}
 ): PluginOption {
     setGlobalConfig(options)
 
-    const { enableDevWebp, cacheDir, enableDev, compatibility, enableWebp } =
-        getGlobalConfig()
+    const {
+        enableDevConvert,
+        cacheDir,
+        enableDev,
+        compatibility
+    } = getGlobalConfig()
 
     let isBuild = false
     let viteConfig: UserConfig
@@ -75,6 +82,110 @@ export default function ImageTools(
             if (!enableDev) {
                 return
             }
+            const cssGenOutputFiles = new Set(
+                (getGlobalConfig().cssGen?.rules || []).map((rule) =>
+                    path.resolve(process.cwd(), rule.stylePath)
+                )
+            )
+            const cssGenWatchDirs =
+                getGlobalConfig().cssGen?.rules?.map((rule) =>
+                    path.resolve(process.cwd(), rule.inputDir)
+                ) || []
+            const spriteWatchDirs =
+                getGlobalConfig().spritesConfig?.rules?.map((rule) =>
+                    path.resolve(process.cwd(), rule.dir)
+                ) || []
+            const { extraWatchDirs, generatedPngAbsPaths } =
+                getSpriteDevWatchInfo()
+            const spriteGeneratedOutputs = new Set(
+                generatedPngAbsPaths.map((p) => path.resolve(p))
+            )
+            const isFileUnderDir = (file: string, dir: string) => {
+                const f = path.resolve(file)
+                const d = path.resolve(dir)
+                if (f === d) return true
+                const rel = path.relative(d, f)
+                return (
+                    rel !== '' &&
+                    !rel.startsWith('..') &&
+                    !path.isAbsolute(rel)
+                )
+            }
+            let spriteRebuildTimer: ReturnType<typeof setTimeout> | undefined
+            let cssGenRebuildTimer: ReturnType<typeof setTimeout> | undefined
+            const scheduleCssGenRebuild = () => {
+                if (!cssGenWatchDirs.length) {
+                    return
+                }
+                if (cssGenRebuildTimer) {
+                    clearTimeout(cssGenRebuildTimer)
+                }
+                cssGenRebuildTimer = setTimeout(async () => {
+                    try {
+                        const changed = await generateCssArtifactsForDev()
+                        if (changed) {
+                            server.moduleGraph.invalidateAll()
+                            server.ws.send({ type: 'full-reload' })
+                        }
+                    } catch (error) {
+                        console.error('❌ [DEBUG] CSS generation failed:', error)
+                    }
+                }, 120)
+            }
+            const scheduleSpriteRebuild = () => {
+                if (!spriteWatchDirs.length) {
+                    return
+                }
+                if (spriteRebuildTimer) {
+                    clearTimeout(spriteRebuildTimer)
+                }
+                spriteRebuildTimer = setTimeout(async () => {
+                    try {
+                        clearSpriteCache()
+                        await initSprite({} as any, viteConfig, false)
+                        server.moduleGraph.invalidateAll()
+                        server.ws.send({ type: 'full-reload' })
+                    } catch (error) {
+                        console.error('❌ [DEBUG] Sprite rebuild failed:', error)
+                    }
+                }, 120)
+            }
+            if (cssGenWatchDirs.length) {
+                // Generate once on dev server start.
+                void generateCssArtifactsForDev()
+            }
+            cssGenWatchDirs.forEach((dir) => server.watcher.add(dir))
+            spriteWatchDirs.forEach((dir) => server.watcher.add(dir))
+            extraWatchDirs.forEach((dir) => server.watcher.add(dir))
+            generatedPngAbsPaths.forEach((p) => server.watcher.add(p))
+            const onCssGenChange = (file: string) => {
+                const absFile = path.resolve(file)
+                if (cssGenOutputFiles.has(absFile)) {
+                    return
+                }
+                if (
+                    cssGenWatchDirs.some((dir) => isFileUnderDir(absFile, dir))
+                ) {
+                    scheduleCssGenRebuild()
+                }
+            }
+            const onSpriteChange = (file: string) => {
+                const absFile = path.resolve(file)
+                if (spriteGeneratedOutputs.has(absFile)) {
+                    return
+                }
+                if (
+                    spriteWatchDirs.some((dir) => isFileUnderDir(absFile, dir))
+                ) {
+                    scheduleSpriteRebuild()
+                }
+            }
+            server.watcher.on('add', onCssGenChange)
+            server.watcher.on('add', onSpriteChange)
+            server.watcher.on('change', onCssGenChange)
+            server.watcher.on('change', onSpriteChange)
+            server.watcher.on('unlink', onCssGenChange)
+            server.watcher.on('unlink', onSpriteChange)
             server.middlewares.use(async (req, res, next) => {
                 const url = req.url || ''
                 const isFilter = await filterImage(url)
@@ -105,10 +216,14 @@ export default function ImageTools(
             })
         },
         async transformIndexHtml(html) {
+            const globalConfig = getGlobalConfig()
+            const enableMainWebp =
+                globalConfig.convert.enable &&
+                globalConfig.convert.format === 'webp'
             if (
                 !compatibility ||
-                (isBuild && !enableWebp) ||
-                (!isBuild && enableDevWebp)
+                (isBuild && !enableMainWebp) ||
+                (!isBuild && enableDevConvert)
             ) {
                 return {
                     html,
@@ -140,27 +255,36 @@ export default function ImageTools(
                 ]
             }
         },
-        async generateBundle(_options, bundle) {
+        async generateBundle(options, bundle) {
             if (!isBuild) return
+            const globalConfig = getGlobalConfig()
+           
             await initOriginalFileNames(bundle, viteConfig)
             await initBundleStyles(bundle)
             await handleSpritesCssBundle(this, bundle)
-            if (enableWebp) {
-                await handleWebpImgMap(bundle)
+            if (globalConfig.convert.enable) {
+                await handleConvertImgMap(bundle)
             }
 
             await handleImgBundle(bundle)
+            const outDir = path.resolve(
+                process.cwd(),
+                options.dir || viteConfig.build?.outDir || 'dist'
+            )
+            await generateCssArtifacts(outDir)
         },
         async writeBundle(opt, bundle) {
-            const { enableWebp, compatibility, log, publicConfig } =
+            const { compatibility, log, publicConfig, convert } =
                 getGlobalConfig()
+            const enableMainWebp =
+                convert.enable && convert.format === 'webp'
             if (publicConfig && publicConfig.enable) {
                 await handlePublicImg(viteConfig)
             }
             if (log) {
                 printLog()
             }
-            if (!enableWebp) {
+            if (!enableMainWebp) {
                 return
             }
             for (const key in bundle) {
@@ -168,8 +292,8 @@ export default function ImageTools(
 
                 if (/(html)$/.test(key)) {
                     const htmlCode = compatibility
-                        ? await transformWebpExtInHtml(chunk.source)
-                        : await handleReplaceWebp(chunk.source)
+                        ? await transformExtInHtml(chunk.source, convert.format)
+                        : await handleReplaceConverted(chunk.source)
                     writeFileSync(join(opt.dir!, chunk.fileName), htmlCode)
                 }
             }

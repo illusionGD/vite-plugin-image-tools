@@ -56,6 +56,40 @@ export function clearSpriteCache() {
 }
 
 /**
+ * Paths for dev server watcher: generated sprite PNGs (always) and output-only dirs.
+ * Matches naming in createSprites: name ? `${name}.png` : `${dirName}-sprites.png`.
+ */
+export function getSpriteDevWatchInfo(): {
+  extraWatchDirs: string[]
+  generatedPngAbsPaths: string[]
+} {
+  const sc = getGlobalConfig().spritesConfig
+  if (!sc?.rules?.length) {
+    return { extraWatchDirs: [], generatedPngAbsPaths: [] }
+  }
+  const globalOut = sc.outputDir
+  const extraDirs = new Set<string>()
+  const pngPaths: string[] = []
+  for (const rule of sc.rules) {
+    const dirAbs = resolve(cwd(), rule.dir)
+    const folderName = parse(dirAbs).name
+    const outPathName = (rule.name || sc.name)
+      ? `${rule.name || sc.name}.png`
+      : `${folderName}-sprites.png`
+    const outRel = rule.outputDir || globalOut
+    const outputDirAbs = outRel ? resolve(cwd(), outRel) : dirAbs
+    pngPaths.push(resolve(outputDirAbs, outPathName))
+    if (outRel && outputDirAbs !== dirAbs) {
+      extraDirs.add(outputDirAbs)
+    }
+  }
+  return {
+    extraWatchDirs: [...extraDirs],
+    generatedPngAbsPaths: pngPaths
+  }
+}
+
+/**
  * Initialize sprite generation process
  * Read all rules in configuration, generate corresponding sprites for each directory
  */
@@ -64,7 +98,7 @@ export async function initSprite(
   viteConfig: UserConfig,
   isBuild: boolean
 ) {
-  const { spritesConfig, debugLog } = getGlobalConfig()
+  const { spritesConfig } = getGlobalConfig()
 
   if (!checkSpriteConfig()) {
     return
@@ -123,9 +157,6 @@ export async function initSprite(
           }
         }
       })
-      if (debugLog) {
-        console.log('🐛 ~ Base64 small images in sprite:', base64Imgs)
-      }
     }
   } catch (error) {
     console.log('[Sprite Error]', error)
@@ -138,7 +169,7 @@ export async function initSprite(
  * @returns Returns sprite style information
  */
 export async function createSprites(spritesDir: string) {
-  const { spritesConfig, debugLog } = getGlobalConfig()
+  const { spritesConfig } = getGlobalConfig()
 
   if (!spritesConfig) {
     return
@@ -149,7 +180,6 @@ export async function createSprites(spritesDir: string) {
   const algorithm = rule
     ? rule.algorithm || spritesConfig.algorithm
     : spritesConfig.algorithm
-  const suffix = rule?.suffix || spritesConfig.suffix
   const output = rule?.outputDir || spritesOutputDir
   const outputDir = output ? join(cwd(), output) : ''
 
@@ -165,8 +195,10 @@ export async function createSprites(spritesDir: string) {
     return
   }
 
-  const { name } = parse(dir)
-  const outPathName = `${name}-${suffix}.png`
+  const { name: dirName } = parse(dir)
+  const outPathName = (rule?.name || spritesConfig.name)
+    ? `${rule?.name || spritesConfig.name}.png`
+    : `${dirName}-sprites.png`
 
   // Filter images
   const files = readdirSync(dir)
@@ -211,11 +243,6 @@ export async function createSprites(spritesDir: string) {
     Object.keys(result.coordinates).forEach((filePath) => {
       spriteImageIndex.set(filePath, dir)
     })
-
-    if (debugLog) {
-      console.log('🐛 Output sprite:', join(originalDir, outPathName))
-      console.log('🐛 Sprite sub-images:', files)
-    }
 
     writeFileSync(join(originalDir, outPathName), result.image)
 
@@ -283,7 +310,6 @@ const URL_REGEX = /url\s*\(\s*(['"]?)([^"')]+?)\1\s*\)/gi
  * @param isBuild Whether in build mode
  */
 function processSpritesBgRule(rule: Rule, id: string, viteConfig: UserConfig) {
-  const { debugLog } = getGlobalConfig()
   rule.walkDecls(/background(-image)?$/i, (decl: postcss.Declaration) => {
     const { value } = decl
 
@@ -321,9 +347,6 @@ function processSpritesBgRule(rule: Rule, id: string, viteConfig: UserConfig) {
       )
     }
 
-    if (debugLog) {
-      console.log('🐛~ Replace sprite in css:', url, '-->', decl.value)
-    }
     modifySpritesCss(rule, targetSprite, filePath)
   })
 }
@@ -568,7 +591,7 @@ export async function initOriginalFileNames(
  * @param bundle
  */
 export async function initBundleStyles(bundle: any) {
-  const { spritesConfig, debugLog } = getGlobalConfig()
+  const { spritesConfig } = getGlobalConfig()
   const absolutePaths = []
   for (const key in bundle) {
     const { ext } = parse(key)
@@ -595,13 +618,9 @@ export async function initBundleStyles(bundle: any) {
       }
     }
   }
-  if (debugLog) {
-    console.log('🐛Sprite sub-images in bundle:', absolutePaths)
-  }
 }
 
 export async function handleSpritesCssBundle(that: PluginContext, bundle: any) {
-  const { debugLog } = getGlobalConfig()
   for (const key in bundle) {
     if (isCssFile(key)) {
       const css = bundle[key].source || ''
@@ -640,14 +659,6 @@ export async function handleSpritesCssBundle(that: PluginContext, bundle: any) {
                     ? getRelativeAssetPath(key, spritesAssetsPath)
                     : url.replace(parse(url).base, spriteBase)
                 )
-                if (debugLog) {
-                  console.log(
-                    '🐛~ Replace sprite in css:',
-                    url,
-                    '-->',
-                    decl.value
-                  )
-                }
                 modifySpritesCss(rule, targetSprite, absolutePath)
               }
             )

@@ -8,9 +8,11 @@ import sharp from 'sharp'
 import { pressBufferToImage } from './compress'
 import { logSize } from './log'
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
+import { resolveInternalConfig, type InternalConfig } from './config/resolve'
 
 const imgWebpMap: { [key: string]: string } = {}
-const globalConfig: PluginOptions = JSON.parse(JSON.stringify(DEFAULT_CONFIG))
+const imgConvertMap: { [key: string]: string } = {}
+const globalConfig: InternalConfig = resolveInternalConfig(DEFAULT_CONFIG)
 /** Compressed image cache */
 export const compressCache: { [key: string]: Buffer } = {}
 
@@ -21,7 +23,8 @@ export function getGlobalConfig() {
 
 /** Set global configuration */
 export function setGlobalConfig(config: Partial<PluginOptions>) {
-  Object.assign(globalConfig, DEFAULT_CONFIG, config)
+  const resolved = resolveInternalConfig(config)
+  Object.assign(globalConfig, resolved)
   globalConfig.spritesConfig = Object.assign(
     {},
     DEFAULT_CONFIG.spritesConfig,
@@ -39,14 +42,33 @@ export function getImgWebpMap() {
   return imgWebpMap
 }
 
-/** Handle map of images to be converted to webp */
-export async function handleWebpImgMap(bundle: any) {
-  const { webpConfig } = getGlobalConfig()
+/**
+ * @en Add generic image conversion mapping.
+ * @zh 添加通用格式转换映射。
+ */
+export function addImgConvertMap(fromName: string, toName: string) {
+  imgConvertMap[fromName] = toName
+}
+
+/**
+ * @en Read generic image conversion mapping.
+ * @zh 读取通用格式转换映射。
+ */
+export function getImgConvertMap() {
+  return imgConvertMap
+}
+
+/** Handle map of images to be converted to target format */
+export async function handleConvertImgMap(bundle: any) {
+  const { convert, perImage } = getGlobalConfig()
   for (const key in bundle) {
     const chunk = bundle[key] as any
     const { base, ext } = parse(chunk.fileName)
+    const sourcePath = chunk.originalFileNames?.[0] || chunk.fileName || key
+    const single = await perImage(join(cwd(), sourcePath))
+    const targetFormat = single?.format || convert.format || IMG_FORMATS_ENUM.webp
 
-    if (imgWebpMap[base] || ext.includes(IMG_FORMATS_ENUM.webp)) {
+    if (imgConvertMap[base] || ext.includes(targetFormat)) {
       continue
     }
 
@@ -58,34 +80,27 @@ export async function handleWebpImgMap(bundle: any) {
 
     const { source, originalFileNames } = chunk
 
-    // Limit webp size
+    // Limit conversion size
     if (
-      webpConfig?.limitSize &&
+      convert?.limitSize &&
       source &&
-      source.length <= webpConfig?.limitSize
+      source.length <= convert?.limitSize
     ) {
       continue
     }
 
-    // Webp filter function
-    if (webpConfig && webpConfig.filter) {
-      const { filter } = webpConfig
-      let buildWebp = false
+    // Conversion filter function
+    if (convert && convert.filter) {
+      const { filter } = convert
+      let shouldConvert = false
 
       for (let index = 0; index < originalFileNames.length; index++) {
         const path = originalFileNames[index]
-        if (filter instanceof Function) {
-          if (isAsyncFunction(filter)) {
-            buildWebp = await filter(join(cwd(), path))
-          } else {
-            buildWebp = filter(join(cwd(), path))
-          }
-
-          if (buildWebp) break
-        }
+        shouldConvert = await filter(join(cwd(), path))
+        if (shouldConvert) break
       }
 
-      if (!buildWebp) {
+      if (!shouldConvert) {
         continue
       }
     }
@@ -93,34 +108,44 @@ export async function handleWebpImgMap(bundle: any) {
     if (source) {
       const metadata = await sharp(source).metadata()
       const { width, height } = metadata
-      // WebP maximum resolution cannot exceed 16383 * 16383, otherwise an error will be thrown
-      if (width && height && (width > 16383 || height > 16383)) {
+      // WebP maximum resolution cannot exceed 16383 * 16383.
+      if (
+        targetFormat === IMG_FORMATS_ENUM.webp &&
+        width &&
+        height &&
+        (width > 16383 || height > 16383)
+      ) {
         continue
       }
     }
 
     // File size before and after conversion
     const { sharpConfig } = getGlobalConfig()
-    const webpBuffer = await pressBufferToImage(
+    const convertedBuffer = await pressBufferToImage(
       chunk.source,
-      IMG_FORMATS_ENUM.webp,
-      sharpConfig[IMG_FORMATS_ENUM.webp]
+      targetFormat,
+      sharpConfig[targetFormat]
     )
 
-    // Skip conversion if WebP file size is larger than original
-    if (webpBuffer.length >= source.length) {
+    // Skip conversion if converted file size is larger than original
+    if (convertedBuffer.length >= source.length) {
       continue
     }
+    const convertedBase = base.replace(/\.[^.]+$/, `.${targetFormat}`)
     logSize.push({
       fileName: base,
-      webpName: replaceWebpExt(base),
+      webpName: convertedBase,
       originSize: source.length,
-      compressSize: webpBuffer.length
+      compressSize: convertedBuffer.length
     })
-    compressCache[replaceWebpExt(key)] = webpBuffer
+    const convertedName = replaceExt(key, targetFormat)
+    compressCache[convertedName] = convertedBuffer
 
-    // Collect images to be converted to WebP
-    addImgWebpMap(base)
+    // Collect images to be converted to target format
+    addImgConvertMap(base, convertedBase)
+    if (targetFormat === IMG_FORMATS_ENUM.webp) {
+      addImgWebpMap(base)
+    }
   }
 }
 
@@ -137,13 +162,17 @@ export async function filterChunkImage(chunk: any) {
   }
 }
 
-export function handleReplaceWebp(str: string) {
-  const map = getImgWebpMap()
-  let temp = str
+/**
+ * @en Replace image names by generic conversion map.
+ * @zh 根据通用转换映射替换图片名称。
+ */
+export function handleReplaceConverted(str: string) {
+  const map = getImgConvertMap()
+  let next = str
   for (const key in map) {
-    temp = temp.replace(new RegExp(key, 'g'), map[key])
+    next = next.replace(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), map[key])
   }
-  return temp
+  return next
 }
 
 /** Get cache key */
@@ -211,16 +240,21 @@ export async function filterImage(filePath: string) {
   return await handleFilterPath(filePath)
 }
 
-/** Replace with webp extension */
-export function replaceWebpExt(url: string) {
+/** Replace extension with target format */
+export function replaceExt(url: string, targetFormat: string) {
   if (isBase64(url)) {
     return url
   }
-  const [path, query] = url.split('?')
-  const ext = extname(path)
+  const [pathname, query] = url.split('?')
+  const ext = extname(pathname)
 
-  const newPath = url.replace(ext, '.webp')
+  const newPath = pathname.replace(ext, `.${targetFormat}`)
   return query ? `${newPath}?${query}` : newPath
+}
+
+/** Backward compatibility helper for webp replacement */
+export function replaceWebpExt(url: string) {
+  return replaceExt(url, IMG_FORMATS_ENUM.webp)
 }
 
 /** Handle user's filter function to filter image paths */
