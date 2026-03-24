@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 4.1.1
+
+### Patch Changes
+
+- fix vite@8.x bug and fix css-gen sprites bug
+
 ## 4.1.0
 
 ### Minor Changes

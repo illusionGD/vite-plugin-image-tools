@@ -50,11 +50,11 @@ export default defineConfig({
       },
       spritesConfig: {
         rules: [
-          {
-            dir: './src/assets/icons',
-            outputDir: './src/assets/sprites',
-            name: 'icons-sprites-test',
-          }
+        //   {
+        //     dir: './src/assets/icons',
+        //     outputDir: './src/assets/sprites',
+        //     name: 'icons-sprites-test',
+        //   }
         ],
         rootValue: 100,
         algorithm: 'binary-tree'
@@ -63,7 +63,7 @@ export default defineConfig({
         rules: [
           {
             inputDir: './src/assets/icons',
-            stylePath: 'assets/generated/image-classes.css',
+            stylePath: './src/assets/generated/image-classes.css',
             classPrefix: 'ui--',
             variantRules: [
               {
@@ -74,7 +74,7 @@ export default defineConfig({
           },
           {
             inputDir: './src/assets',
-            stylePath: 'assets/generated/image-classes.css',
+            stylePath: './src/assets/generated/image-classes.css',
             includes: /\.(png|jpe?g)$/i,
             excludes: /icons\//,
             transform: ({ className, imageUrl, imageAbsPath, width, height }) => {

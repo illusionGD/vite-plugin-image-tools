@@ -42,6 +42,21 @@ export function getImgWebpMap() {
   return imgWebpMap
 }
 
+const escapeRegExp = (s: string) =>
+  s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * @en Normalize Rollup/Vite asset basename (may be percent-encoded for non-ASCII).
+ * @zh 规范化打包资源文件名（非 ASCII 时可能被 percent-encode）。
+ */
+export function normalizeAssetBase(base: string): string {
+  try {
+    return decodeURIComponent(base)
+  } catch {
+    return base
+  }
+}
+
 /**
  * @en Add generic image conversion mapping.
  * @zh 添加通用格式转换映射。
@@ -63,7 +78,8 @@ export async function handleConvertImgMap(bundle: any) {
   const { convert, perImage } = getGlobalConfig()
   for (const key in bundle) {
     const chunk = bundle[key] as any
-    const { base, ext } = parse(chunk.fileName)
+    const { ext } = parse(chunk.fileName)
+    const base = normalizeAssetBase(parse(chunk.fileName).base)
     const sourcePath = chunk.originalFileNames?.[0] || chunk.fileName || key
     const single = await perImage(join(cwd(), sourcePath))
     const targetFormat = single?.format || convert.format || IMG_FORMATS_ENUM.webp
@@ -170,7 +186,28 @@ export function handleReplaceConverted(str: string) {
   const map = getImgConvertMap()
   let next = str
   for (const key in map) {
-    next = next.replace(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), map[key])
+    const to = map[key]
+    const pairs: { from: string; to: string }[] = [{ from: key, to }]
+    try {
+      const encUri = encodeURI(key)
+      if (encUri !== key) {
+        pairs.push({ from: encUri, to: encodeURI(to) })
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      const encComp = encodeURIComponent(key)
+      if (encComp !== key && !pairs.some((p) => p.from === encComp)) {
+        pairs.push({ from: encComp, to: encodeURIComponent(to) })
+      }
+    } catch {
+      /* ignore */
+    }
+    pairs.sort((a, b) => b.from.length - a.from.length)
+    for (const { from, to: rep } of pairs) {
+      next = next.replace(new RegExp(escapeRegExp(from), 'g'), rep)
+    }
   }
   return next
 }

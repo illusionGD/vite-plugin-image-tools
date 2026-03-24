@@ -9,7 +9,8 @@ import {
   getImgConvertMap,
   isAsyncFunction,
   compressCache,
-  filterImage
+  filterImage,
+  normalizeAssetBase
 } from './utils'
 import sharp, { type FormatEnum } from 'sharp'
 import { existsSync, readdirSync, readFileSync, writeFile } from 'fs'
@@ -24,6 +25,8 @@ import { logSize } from './log'
 import { UserConfig } from 'vite'
 import { cwd } from 'process'
 import { stat } from 'fs/promises'
+import type { PluginContext } from 'rollup'
+import { markBundleFileForDeletion } from './bundle-delete'
 
 /** Format jpeg extension */
 function formatJPGExt(type: string): ImgFormatType {
@@ -31,55 +34,6 @@ function formatJPGExt(type: string): ImgFormatType {
   return ext === IMG_FORMATS_ENUM.jpg || ext === IMG_FORMATS_ENUM.jpeg
     ? 'jpeg'
     : (ext as ImgFormatType)
-}
-
-function deepClone<T>(value: T, seen = new Map<any, any>()): T {
-  if (value === null || typeof value !== 'object') {
-    return value
-  }
-  if (seen.has(value)) {
-    return seen.get(value)
-  }
-  if (Buffer.isBuffer(value)) {
-    return Buffer.from(value) as any
-  }
-  if (value instanceof Date) {
-    return new Date(value.getTime()) as any
-  }
-  if (value instanceof RegExp) {
-    return new RegExp(value.source, value.flags) as any
-  }
-  if (value instanceof Map) {
-    const result = new Map()
-    seen.set(value, result)
-    value.forEach((val, key) => {
-      result.set(deepClone(key, seen), deepClone(val, seen))
-    })
-    return result as any
-  }
-  if (value instanceof Set) {
-    const result = new Set()
-    seen.set(value, result)
-    value.forEach((val) => {
-      result.add(deepClone(val, seen))
-    })
-    return result as any
-  }
-  if (ArrayBuffer.isView(value)) {
-    return new (value.constructor as any)(value as any) as any
-  }
-  if (value instanceof ArrayBuffer) {
-    return value.slice(0) as any
-  }
-
-  const result: any = Array.isArray(value) ? [] : {}
-  seen.set(value, result)
-
-  for (const key of Object.keys(value as any)) {
-    result[key] = deepClone((value as any)[key], seen)
-  }
-
-  return result
 }
 
 /** Compress image buffer */
@@ -212,7 +166,7 @@ export async function processImage(filePath: string) {
 }
 
 /** Process image bundle, compress & convert to webp */
-export async function handleImgBundle(bundle: any) {
+export async function handleImgBundle(bundle: any, pluginContext: PluginContext) {
   const convertMap = getImgConvertMap()
 
   for (const key in bundle) {
@@ -248,30 +202,35 @@ export async function handleImgBundle(bundle: any) {
     const format = ext.replace('.', '') as ImgFormatType
     const isSvg = format === IMG_FORMATS_ENUM.svg
     // Whether to convert to target format
-    const transformTarget = !!convertMap[parse(key).base]
+    const rawBase = parse(key).base
+    const normBase = normalizeAssetBase(rawBase)
+    const transformTarget = !!convertMap[normBase]
     const originBuffer = chunk.source as any
 
     if (transformTarget) {
       try {
-        const convertedName = convertMap[parse(key).base]
-          ? key.replace(parse(key).base, convertMap[parse(key).base])
+        const convertedName = convertMap[normBase]
+          ? key.replace(rawBase, convertMap[normBase])
           : replaceExt(key, targetFormat)
-        const convertedChunk = deepClone(chunk)
         const convertedBuffer =
           compressCache[convertedName] ||
           (await pressBufferToImage(
-            convertedChunk.source,
+            chunk.source,
             targetFormat,
             Object.assign({}, sharpConfig[targetFormat], {
               quality: singleQuality
             })
           ))
 
-        convertedChunk.source = convertedBuffer
-        convertedChunk.fileName = convertedName
-        bundle[convertedName] = convertedChunk
+        pluginContext.emitFile({
+          type: 'asset',
+          fileName: convertedName,
+          name: parse(convertedName).base,
+          originalFileName: chunk.originalFileNames?.[0] || chunk.fileName || key,
+          source: convertedBuffer
+        })
         // Cache
-        compressCache[convertedName] = convertedChunk.source
+        compressCache[convertedName] = convertedBuffer
 
         if (!compressCache[convertedName]) {
           logSize.push({
@@ -289,7 +248,7 @@ export async function handleImgBundle(bundle: any) {
     // If converted to webp and not compatible, remove original image
     const { deleteOriginImg } = convert || {}
     if (transformTarget && !compatibility && deleteOriginImg) {
-      delete bundle[key]
+      markBundleFileForDeletion(chunk.fileName || key)
       continue
     }
 
