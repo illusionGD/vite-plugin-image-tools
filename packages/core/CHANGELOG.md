@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 4.1.0
+
+### Minor Changes
+
+- add css-gen tranform function
+
 ## 4.0.0
 
 ### Major Changes

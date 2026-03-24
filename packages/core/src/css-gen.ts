@@ -1,7 +1,7 @@
 import path from 'path'
 import { promises as fs } from 'fs'
 import sharp from 'sharp'
-import type { CssGenRule } from './types'
+import type { CssGenRule, CssGenStyleObject } from './types'
 import {
   getGlobalConfig,
   checkPattern,
@@ -12,18 +12,29 @@ import {
 const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|svg|avif|tiff?)$/i
 
 type CssGenItem = {
+  className: string
   selector: string
   pseudo: string
   imageUrl: string
+  imageAbsPath: string
   width?: number
   height?: number
+  transform?: CssGenRule['transform']
 }
 
+/**
+ * @en Normalize pseudo selector to `:xxx` format.
+ * @zh 规范化伪类写法，统一为 `:xxx` 格式。
+ */
 function normalizePseudo(input: string): string {
   if (!input) return ''
   return input.startsWith(':') ? input : `:${input}`
 }
 
+/**
+ * @en Sanitize css class name to avoid invalid selectors.
+ * @zh 清洗类名，避免生成非法选择器。
+ */
 function sanitizeClassName(name: string): string {
   const cleaned = name
     .trim()
@@ -34,6 +45,10 @@ function sanitizeClassName(name: string): string {
   return cleaned
 }
 
+/**
+ * @en Resolve final selector from class strategy.
+ * @zh 根据规则解析最终选择器。
+ */
 function resolveSelector(rule: CssGenRule, filePath: string, baseName: string): string {
   const classPrefix = rule.classPrefix ?? 'ui--'
   const resolved = rule.resolveClass
@@ -42,6 +57,10 @@ function resolveSelector(rule: CssGenRule, filePath: string, baseName: string): 
   return `.${sanitizeClassName(resolved)}`
 }
 
+/**
+ * @en Resolve variant filename suffix into pseudo selector.
+ * @zh 将变体文件名后缀映射为伪类选择器。
+ */
 function resolveVariant(rule: CssGenRule, baseName: string): { baseName: string; pseudo: string } {
   const variantRules = rule.variantRules || []
   for (const variantRule of variantRules) {
@@ -55,6 +74,10 @@ function resolveVariant(rule: CssGenRule, baseName: string): { baseName: string;
   return { baseName, pseudo: '' }
 }
 
+/**
+ * @en Read image width/height metadata with graceful fallback.
+ * @zh 读取图片宽高元信息，失败时优雅回退为空。
+ */
 async function readImageSize(imagePath: string): Promise<{ width?: number; height?: number }> {
   try {
     const metadata = await sharp(imagePath).metadata()
@@ -64,6 +87,10 @@ async function readImageSize(imagePath: string): Promise<{ width?: number; heigh
   }
 }
 
+/**
+ * @en Recursively collect all files from a directory.
+ * @zh 递归收集目录下所有文件。
+ */
 async function collectFilesRecursively(dir: string, collector: string[]) {
   const entries = await fs.readdir(dir, { withFileTypes: true })
   for (const entry of entries) {
@@ -76,6 +103,10 @@ async function collectFilesRecursively(dir: string, collector: string[]) {
   }
 }
 
+/**
+ * @en Collect css generation items for one rule.
+ * @zh 按单条规则收集用于生成 CSS 的条目。
+ */
 async function collectRuleItems(rule: CssGenRule, outDir: string): Promise<CssGenItem[]> {
   const root = path.resolve(process.cwd(), rule.inputDir)
   const styleOutPath = path.resolve(outDir, rule.stylePath)
@@ -94,44 +125,97 @@ async function collectRuleItems(rule: CssGenRule, outDir: string): Promise<CssGe
     const parsed = path.parse(fileAbs)
     const variant = resolveVariant(rule, parsed.name)
     const selector = resolveSelector(rule, fileAbs, variant.baseName)
+    const className = selector.startsWith('.') ? selector.slice(1) : selector
     const imageUrl = getRelativeAssetPath(styleOutPath, fileAbs)
     const size = await readImageSize(fileAbs)
 
     result.push({
+      className,
       selector,
       pseudo: variant.pseudo,
       imageUrl,
+      imageAbsPath: fileAbs,
       width: size.width,
-      height: size.height
+      height: size.height,
+      transform: rule.transform
     })
   }
 
   return result
 }
 
-function renderCss(items: CssGenItem[]): string {
-  return items
-    .map((item) => {
+/**
+ * @en Convert camelCase style key to kebab-case css key.
+ * @zh 将 camelCase 样式键转换为 kebab-case CSS 键。
+ */
+function toKebabCase(input: string): string {
+  return input.replace(/[A-Z]/g, (matched) => `-${matched.toLowerCase()}`)
+}
+
+/**
+ * @en Convert style object to css declaration lines.
+ * @zh 将样式对象转换为 CSS 声明行。
+ */
+function styleObjectToLines(style: CssGenStyleObject): string[] {
+  return Object.entries(style)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => `${toKebabCase(key)}: ${String(value)};`)
+}
+
+/**
+ * @en Resolve css body from transform style object, fallback to defaults.
+ * @zh 优先使用 transform 返回的样式对象，空值时回退默认声明。
+ */
+async function resolveCssBody(item: CssGenItem, fallbackLines: string[]): Promise<string> {
+  const customStyle = await item.transform?.({
+    className: item.className,
+    imageUrl: item.imageUrl,
+    imageAbsPath: item.imageAbsPath,
+    width: item.width,
+    height: item.height
+  })
+
+  if (!customStyle) return fallbackLines.join('\n')
+
+  const customLines = styleObjectToLines(customStyle)
+  return customLines.length ? customLines.join('\n') : fallbackLines.join('\n')
+}
+
+/**
+ * @en Render css blocks with tab indentation.
+ * @zh 生成带 tab 缩进的 CSS 代码块。
+ */
+async function renderCss(items: CssGenItem[]): Promise<string> {
+  const blocks = await Promise.all(
+    items.map(async (item) => {
+      const baseBody = await resolveCssBody(item, [
+        `background-image: url(${item.imageUrl});`,
+        item.width ? `width: ${item.width}px;` : '',
+        item.height ? `height: ${item.height}px;` : ''
+      ].filter(Boolean))
+
       const baseLines = [
         `${item.selector}{`,
-        `  background-image: url(${item.imageUrl});`,
-        item.width ? `  width: ${item.width}px;` : '',
-        item.height ? `  height: ${item.height}px;` : '',
+        ...baseBody.split('\n').map((line) => `\t${line}`),
         '}'
-      ].filter(Boolean)
+      ]
 
       if (!item.pseudo) {
         return baseLines.join('\n')
       }
 
+      const variantBody = await resolveCssBody(item, [`background-image: url(${item.imageUrl});`])
       const variantLines = [
         `${item.selector}${item.pseudo}{`,
-        `  background-image: url(${item.imageUrl});`,
+        ...variantBody.split('\n').map((line) => `\t${line}`),
         '}'
       ]
+
       return `${baseLines.join('\n')}\n${variantLines.join('\n')}`
     })
-    .join('\n\n')
+  )
+
+  return blocks.join('\n\n')
 }
 
 /**
@@ -154,7 +238,7 @@ export async function generateCssArtifacts(outDir: string) {
 
   let hasChanged = false
   for (const [stylePath, items] of grouped.entries()) {
-    const cssText = await handleReplaceConverted(renderCss(items))
+    const cssText = await handleReplaceConverted(await renderCss(items))
     await fs.mkdir(path.dirname(stylePath), { recursive: true })
     let current = ''
     try {

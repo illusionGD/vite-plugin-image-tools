@@ -224,7 +224,76 @@ cssGen: {
       variantRules: [
         { regex: /_hover$/, pseudo: ':hover' }
       ],
-      resolveClass: (filePath, baseName) => `ui--${baseName}`
+      resolveClass: (filePath, baseName) => `ui--${baseName}`,
+      transform: ({ className, imageUrl, imageAbsPath, width, height }) => {
+        if (className !== 'ui-css' || !imageAbsPath.includes('css.jpg')) return
+        return {
+          backgroundImage: `url(${imageUrl})`,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
+          backgroundSize: 'contain',
+          width: width ? `${Math.round(width / 4)}px` : undefined,
+          height: height ? `${Math.round(height / 4)}px` : undefined
+        }
+      }
+    }
+  ]
+}
+```
+
+`transform` 的入参：
+- `className`：生成后的类名（不含前导 `.`）
+- `imageUrl`：CSS 中使用的相对图片路径
+- `imageAbsPath`：源图片绝对路径
+- `width` / `height`：图片元信息宽高
+
+`transform` 的返回值：
+- 返回样式对象（`Record<string, string | number | null | undefined>`）
+- 键名支持 `camelCase` 和 `kebab-case`
+- 返回空值（`undefined` / `null`）时，回退到默认生成声明
+
+`cssGen` 详细配置示例：
+
+```js
+cssGen: {
+  format: 'css',
+  rules: [
+    {
+      // 递归扫描该目录
+      inputDir: './src/assets/icons',
+      // 输出 CSS 文件（开发环境相对项目根目录 / 构建时相对 outDir）
+      stylePath: 'assets/generated/image-classes.css',
+      // 默认类名：`${classPrefix}${baseName}`
+      classPrefix: 'ui--',
+      // 可选的 includes / excludes / filter 过滤链
+      includes: /\.(png|jpe?g|webp)$/i,
+      excludes: /\/deprecated\//,
+      filter: async (absPath) => !absPath.includes('ignore'),
+      // 文件名后缀转伪类
+      variantRules: [
+        { regex: /_hover$/, pseudo: ':hover' },
+        { regex: /_active$/, pseudo: 'active' } // 也支持 'active'（会自动转成 ':active'）
+      ],
+      // 可选的类名解析器
+      resolveClass: (filePath, baseName) => {
+        if (filePath.includes('/brand/')) return `brand-${baseName}`
+        return `ui--${baseName}`
+      },
+      // 可选自定义样式对象
+      transform: ({ className, imageUrl, imageAbsPath, width, height }) => {
+        // 只对某张图自定义，其它返回空值走默认回退
+        if (className === 'ui--logo' && imageAbsPath.includes('logo.png')) {
+          return {
+            backgroundImage: `url(${imageUrl})`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            backgroundSize: 'contain',
+            width: width ? `${width}px` : undefined,
+            height: height ? `${height}px` : undefined
+          }
+        }
+        return
+      }
     }
   ]
 }

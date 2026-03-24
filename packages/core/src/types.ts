@@ -88,6 +88,21 @@ export type CssGenVariantRule = {
   pseudo: string
 }
 
+export type CssGenTransformContext = {
+  /** @en Generated class name (without leading dot). @zh 生成后的类名（不含前导点号）。 */
+  className: string
+  /** @en Relative image URL used in css `url(...)`. @zh CSS `url(...)` 使用的图片相对路径。 */
+  imageUrl: string
+  /** @en Absolute image file path on disk. @zh 图片在磁盘上的绝对路径。 */
+  imageAbsPath: string
+  /** @en Image intrinsic width from metadata. @zh 图片元信息中的原始宽度。 */
+  width?: number
+  /** @en Image intrinsic height from metadata. @zh 图片元信息中的原始高度。 */
+  height?: number
+}
+
+export type CssGenStyleObject = Record<string, string | number | null | undefined>
+
 export type CssGenRule = {
   inputDir: string
   stylePath: string
@@ -100,6 +115,13 @@ export type CssGenRule = {
   classPrefix?: string
   resolveClass?: (filePath: string, baseName: string) => string
   variantRules?: CssGenVariantRule[]
+  /**
+   * @en Custom style object generator. Return empty to fallback to default css.
+   * @zh 自定义样式对象生成函数。返回空值时回退到默认样式。
+   */
+  transform?: (
+    context: CssGenTransformContext
+  ) => CssGenStyleObject | undefined | null | Promise<CssGenStyleObject | undefined | null>
 }
 
 export type PluginOptions = {

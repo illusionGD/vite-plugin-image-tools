@@ -76,7 +76,19 @@ export default defineConfig({
             inputDir: './src/assets',
             stylePath: 'assets/generated/image-classes.css',
             includes: /\.(png|jpe?g)$/i,
-            excludes: /icons\//
+            excludes: /icons\//,
+            transform: ({ className, imageUrl, imageAbsPath, width, height }) => {
+              // 仅对 css.jpg 返回自定义样式；其他图片走默认回退逻辑
+              if (className !== 'ui-css' || !imageAbsPath.includes('css.jpg')) return
+              return {
+                backgroundImage: `url(${imageUrl})`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+                backgroundSize: 'contain',
+                width: width ? `${Math.round(width / 4)}rem` : undefined,
+                height: height ? `${Math.round(height / 4)}rem` : undefined
+              }
+            }
           }
         ]
       },
