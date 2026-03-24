@@ -63,7 +63,7 @@ export default defineConfig({
         rules: [
           {
             inputDir: './src/assets/icons',
-            stylePath: 'assets/generated/image-classes.css',
+            stylePath: './src/assets/generated/image-classes.css',
             classPrefix: 'ui--',
             variantRules: [
               {
@@ -74,10 +74,11 @@ export default defineConfig({
           },
           {
             inputDir: './src/assets',
-            stylePath: 'assets/generated/image-classes.css',
+            stylePath: './src/assets/generated/image-classes.css',
             includes: /\.(png|jpe?g)$/i,
             excludes: /icons\//,
             transform: ({ className, imageUrl, imageAbsPath, width, height }) => {
+              console.log("🚀 ~ className:", className, imageUrl)
               // 仅对 css.jpg 返回自定义样式；其他图片走默认回退逻辑
               if (className !== 'ui-css' || !imageAbsPath.includes('css.jpg')) return
               return {

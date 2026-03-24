@@ -1,6 +1,7 @@
 // vite-plugin-image-compress.ts
 import type { PluginOption, UserConfig } from 'vite'
 import { existsSync, mkdirSync, writeFileSync } from 'fs'
+import { unlink } from 'fs/promises'
 import path, { join, parse } from 'path'
 import { processImage, handleImgBundle, handlePublicImg } from './compress'
 import {
@@ -25,6 +26,10 @@ import {
 } from './sprites'
 import { printLog } from './log'
 import { generateCssArtifacts, generateCssArtifactsForDev } from './css-gen'
+import {
+    clearPendingDeleteBundleFiles,
+    getPendingDeleteBundleFiles
+} from './bundle-delete'
 
 export default function ImageTools(
     options: Partial<Omit<PluginOptions, 'viteConfig' | 'isBuild'>> = {}
@@ -57,7 +62,9 @@ export default function ImageTools(
         },
 
         async buildStart() {
+            clearPendingDeleteBundleFiles()
             try {
+                await generateCssArtifacts(viteConfig.build?.outDir || 'dist')
                 await initSprite(this, viteConfig, isBuild)
             } catch (error) {
                 console.error('❌ [DEBUG] Sprite initialization failed:', error)
@@ -266,12 +273,12 @@ export default function ImageTools(
                 await handleConvertImgMap(bundle)
             }
 
-            await handleImgBundle(bundle)
+            await handleImgBundle(bundle, this)
             const outDir = path.resolve(
                 process.cwd(),
                 options.dir || viteConfig.build?.outDir || 'dist'
             )
-            await generateCssArtifacts(outDir)
+            
         },
         async writeBundle(opt, bundle) {
             const { compatibility, log, publicConfig, convert } =
@@ -297,6 +304,21 @@ export default function ImageTools(
                     writeFileSync(join(opt.dir!, chunk.fileName), htmlCode)
                 }
             }
+            const outputDir = path.resolve(
+                process.cwd(),
+                opt.dir || viteConfig.build?.outDir || 'dist'
+            )
+            const pendingDeleteFiles = getPendingDeleteBundleFiles()
+            await Promise.all(
+                pendingDeleteFiles.map(async (fileName) => {
+                    try {
+                        await unlink(join(outputDir, fileName))
+                    } catch {
+                        // Ignore if file does not exist on disk.
+                    }
+                })
+            )
+            clearPendingDeleteBundleFiles()
         }
     }
 }

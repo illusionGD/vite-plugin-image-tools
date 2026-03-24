@@ -21,6 +21,7 @@ import type { AnyObject, ImgFormatType, SpritesStylesType } from './types'
 import { IMG_FORMATS_ENUM } from './constants'
 import type { PluginContext } from 'rollup'
 import { UserConfig } from 'vite'
+import { markBundleFileForDeletion } from './bundle-delete'
 
 /**
  * Sprite styles storage object
@@ -613,8 +614,8 @@ export async function initBundleStyles(bundle: any) {
       absolutePaths.push(absolutePath)
       const { deleteOriginImg } = spritesConfig || {}
       if (deleteOriginImg) {
-        // Delete individual image bundle
-        delete bundle[key]
+        // Mark individual image bundle for deletion in writeBundle.
+        markBundleFileForDeletion(bundle[key].fileName || key)
       }
     }
   }
