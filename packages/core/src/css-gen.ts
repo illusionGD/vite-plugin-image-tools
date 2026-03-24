@@ -107,9 +107,10 @@ async function collectFilesRecursively(dir: string, collector: string[]) {
  * @en Collect css generation items for one rule.
  * @zh 按单条规则收集用于生成 CSS 的条目。
  */
-async function collectRuleItems(rule: CssGenRule, outDir: string): Promise<CssGenItem[]> {
+async function collectRuleItems(rule: CssGenRule): Promise<CssGenItem[]> {
   const root = path.resolve(process.cwd(), rule.inputDir)
-  const styleOutPath = path.resolve(outDir, rule.stylePath)
+  /** CSS 文件写在源码树（相对项目根），与 dev/build 无关；用于计算 url(...) 相对图片路径。 */
+  const styleOutPath = path.resolve(process.cwd(), rule.stylePath)
   const files: string[] = []
   const result: CssGenItem[] = []
 
@@ -220,16 +221,16 @@ async function renderCss(items: CssGenItem[]): Promise<string> {
 
 /**
  * @en Generate css artifacts from configured image directories.
- * @zh 根据配置的图片目录生成 CSS 产物。
+ * @zh 根据配置的图片目录生成 CSS 产物。`stylePath` / `inputDir` 均相对 `process.cwd()`（项目根）。
  */
-export async function generateCssArtifacts(outDir: string) {
+export async function generateCssArtifacts() {
   const { cssGen } = getGlobalConfig()
   if (!cssGen?.rules?.length) return false
 
   const grouped = new Map<string, CssGenItem[]>()
   for (const rule of cssGen.rules) {
-    const stylePath = path.resolve(outDir, rule.stylePath)
-    const items = await collectRuleItems(rule, outDir)
+    const stylePath = path.resolve(process.cwd(), rule.stylePath)
+    const items = await collectRuleItems(rule)
     if (!grouped.has(stylePath)) {
       grouped.set(stylePath, [])
     }
@@ -259,5 +260,5 @@ export async function generateCssArtifacts(outDir: string) {
  * @zh 开发模式下生成 CSS 产物（以项目根目录为输出基准）。
  */
 export async function generateCssArtifactsForDev() {
-  return await generateCssArtifacts(process.cwd())
+  return await generateCssArtifacts()
 }

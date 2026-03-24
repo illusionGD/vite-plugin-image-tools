@@ -104,7 +104,9 @@ export type CssGenTransformContext = {
 export type CssGenStyleObject = Record<string, string | number | null | undefined>
 
 export type CssGenRule = {
+  /** @en Relative to project root (`process.cwd()`). @zh 相对项目根目录。 */
   inputDir: string
+  /** @en Generated CSS path relative to project root; same in dev and build. @zh 生成 CSS 相对项目根；开发与构建写入同一路径。 */
   stylePath: string
   /** @en Include patterns, default: none. @zh 包含规则，默认：无 */
   includes?: PatternType

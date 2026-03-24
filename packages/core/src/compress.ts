@@ -9,7 +9,8 @@ import {
   getImgConvertMap,
   isAsyncFunction,
   compressCache,
-  filterImage
+  filterImage,
+  normalizeAssetBase
 } from './utils'
 import sharp, { type FormatEnum } from 'sharp'
 import { existsSync, readdirSync, readFileSync, writeFile } from 'fs'
@@ -201,13 +202,15 @@ export async function handleImgBundle(bundle: any, pluginContext: PluginContext)
     const format = ext.replace('.', '') as ImgFormatType
     const isSvg = format === IMG_FORMATS_ENUM.svg
     // Whether to convert to target format
-    const transformTarget = !!convertMap[parse(key).base]
+    const rawBase = parse(key).base
+    const normBase = normalizeAssetBase(rawBase)
+    const transformTarget = !!convertMap[normBase]
     const originBuffer = chunk.source as any
 
     if (transformTarget) {
       try {
-        const convertedName = convertMap[parse(key).base]
-          ? key.replace(parse(key).base, convertMap[parse(key).base])
+        const convertedName = convertMap[normBase]
+          ? key.replace(rawBase, convertMap[normBase])
           : replaceExt(key, targetFormat)
         const convertedBuffer =
           compressCache[convertedName] ||

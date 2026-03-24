@@ -62,9 +62,10 @@ export default function ImageTools(
         },
 
         async buildStart() {
+            
             clearPendingDeleteBundleFiles()
             try {
-                await generateCssArtifacts(viteConfig.build?.outDir || 'dist')
+                await generateCssArtifacts()
                 await initSprite(this, viteConfig, isBuild)
             } catch (error) {
                 console.error('❌ [DEBUG] Sprite initialization failed:', error)

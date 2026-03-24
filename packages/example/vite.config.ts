@@ -50,11 +50,11 @@ export default defineConfig({
       },
       spritesConfig: {
         rules: [
-          {
-            dir: './src/assets/icons',
-            outputDir: './src/assets/sprites',
-            name: 'icons-sprites-test',
-          }
+        //   {
+        //     dir: './src/assets/icons',
+        //     outputDir: './src/assets/sprites',
+        //     name: 'icons-sprites-test',
+        //   }
         ],
         rootValue: 100,
         algorithm: 'binary-tree'
@@ -78,7 +78,6 @@ export default defineConfig({
             includes: /\.(png|jpe?g)$/i,
             excludes: /icons\//,
             transform: ({ className, imageUrl, imageAbsPath, width, height }) => {
-              console.log("🚀 ~ className:", className, imageUrl)
               // 仅对 css.jpg 返回自定义样式；其他图片走默认回退逻辑
               if (className !== 'ui-css' || !imageAbsPath.includes('css.jpg')) return
               return {
