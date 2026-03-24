@@ -60,7 +60,7 @@
 
     <section class="demo-section">
       <h2>4. cssGen 自动类</h2>
-      <p class="section-desc">根据 assets 自动生成的 CSS 类</p>
+      <p class="section-desc">根据 assets 自动生成的 CSS 类（含 transform 自定义样式 + 默认回退）</p>
       <div class="card-grid card-grid--small">
         <div class="card" v-for="cls in cssGenClasses" :key="cls">
           <div class="card-label">{{ cls }}</div>
@@ -108,7 +108,7 @@
 
 <script setup>
 import importImg from './assets/import.jpg'
-const cssGenClasses = ['ui-1', 'ui-2', 'ui-3', 'ui-4', 'ui-5', 'ui-icon', 'ui-base64']
+const cssGenClasses = ['ui-1', 'ui-2', 'ui-3', 'ui-4', 'ui-5', 'ui-icon', 'ui-base64', 'ui-css']
 </script>
 
 <style scoped lang="scss">

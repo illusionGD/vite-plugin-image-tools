@@ -224,7 +224,76 @@ cssGen: {
       variantRules: [
         { regex: /_hover$/, pseudo: ':hover' }
       ],
-      resolveClass: (filePath, baseName) => `ui--${baseName}`
+      resolveClass: (filePath, baseName) => `ui--${baseName}`,
+      transform: ({ className, imageUrl, imageAbsPath, width, height }) => {
+        if (className !== 'ui-css' || !imageAbsPath.includes('css.jpg')) return
+        return {
+          backgroundImage: `url(${imageUrl})`,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
+          backgroundSize: 'contain',
+          width: width ? `${Math.round(width / 4)}px` : undefined,
+          height: height ? `${Math.round(height / 4)}px` : undefined
+        }
+      }
+    }
+  ]
+}
+```
+
+`transform` receives:
+- `className`: generated class name without leading `.`
+- `imageUrl`: relative asset URL used in CSS
+- `imageAbsPath`: absolute file path of the source image
+- `width` / `height`: image metadata dimensions
+
+Return value of `transform`:
+- return a style object (`Record<string, string | number | null | undefined>`)
+- supports both `camelCase` and `kebab-case` keys
+- return empty (`undefined` / `null`) to fallback to default generated declarations
+
+Detailed `cssGen` configuration example:
+
+```js
+cssGen: {
+  format: 'css',
+  rules: [
+    {
+      // Scan this directory recursively
+      inputDir: './src/assets/icons',
+      // Output css file (relative to project root in dev / outDir in build)
+      stylePath: 'assets/generated/image-classes.css',
+      // Default class name: `${classPrefix}${baseName}`
+      classPrefix: 'ui--',
+      // Optional include/exclude/filter chain
+      includes: /\.(png|jpe?g|webp)$/i,
+      excludes: /\/deprecated\//,
+      filter: async (absPath) => !absPath.includes('ignore'),
+      // Convert filename suffix to pseudo selector
+      variantRules: [
+        { regex: /_hover$/, pseudo: ':hover' },
+        { regex: /_active$/, pseudo: 'active' } // also supports 'active' (auto to ':active')
+      ],
+      // Optional class-name resolver
+      resolveClass: (filePath, baseName) => {
+        if (filePath.includes('/brand/')) return `brand-${baseName}`
+        return `ui--${baseName}`
+      },
+      // Optional custom style object
+      transform: ({ className, imageUrl, imageAbsPath, width, height }) => {
+        // custom style for one image, fallback by returning empty for others
+        if (className === 'ui--logo' && imageAbsPath.includes('logo.png')) {
+          return {
+            backgroundImage: `url(${imageUrl})`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            backgroundSize: 'contain',
+            width: width ? `${width}px` : undefined,
+            height: height ? `${height}px` : undefined
+          }
+        }
+        return
+      }
     }
   ]
 }
