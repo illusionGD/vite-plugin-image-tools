@@ -1,9 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-// import ImageTools from '../src/index'
 import ViteImageTools from '../core/src/index'
 import { resolve } from 'path'
-import { readFileSync, statSync } from 'fs'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -25,59 +23,74 @@ export default defineConfig({
     ViteImageTools({
       quality: 90,
       enableDev: true,
-      enableWebp: true,
-      enableDevWebp: true,
-      compatibility: true,
-      // limitSize: 1024 *1024,
-      // publicConfig: {
-      //     enable: true,
-      //     quality: 50,
-      // },
+      enableDevConvert: true,
+      compatibility: false,
+      convert: {
+        enable: true,
+        format: 'webp',
+        deleteOriginImg: true,
+        limitSize: 2 * 1024
+      },
+      perImage: async (filePath: string) => {
+        if (filePath.includes('import.jpg')) {
+          return { format: 'avif', quality: 60 }
+        }
+        if (filePath.includes('css.jpg')) {
+          return { quality: 50 }
+        }
+        return {}
+      },
       sharpConfig: {
         webp: {
           quality: 80
+        },
+        avif: {
+          quality: 60
         }
       },
-    //   webpConfig: {
-    //     // limitSize: 1024 *1024,
-    //     deleteOriginImg: false,
-    //     filter: (path: string) => {
-    //       if (path.includes('spine')) {
-    //         return false
-    //       }
-
-    //       return true
-    //     }
-    //   },
-      // filter: (path: string) => {
-      //     try {
-      //         const stats = statSync(path)
-      //         if (path.includes('-sprites') && stats.size > 1024 * 20) {
-      //             return true
-      //         }
-      //         if (stats.size < 1024 * 200) {
-      //             return false
-      //         }
-      //         return true
-      //     } catch (error) {
-      //         console.log('ViteImageTools~ filter error:', error)
-      //         return false
-      //     }
-      // },
-      // debugLog: true,
       spritesConfig: {
-        // outputDir: './src/assets/sprites',
         rules: [
-          {
-            dir: './src/assets/icons',
-    
-          },
+        //   {
+        //     dir: './src/assets/icons',
+        //     outputDir: './src/assets/sprites',
+        //     name: 'icons-sprites-test',
+        //   }
         ],
-        // transformUnit: (unit) => {
-        //   return unit / 100 + 'rem'
-        // },
         rootValue: 100,
         algorithm: 'binary-tree'
+      },
+      cssGen: {
+        rules: [
+          {
+            inputDir: './src/assets/icons',
+            stylePath: './src/assets/generated/image-classes.css',
+            classPrefix: 'ui--',
+            variantRules: [
+              {
+                regex: /_hover$/,
+                pseudo: ':hover'
+              }
+            ]
+          },
+          {
+            inputDir: './src/assets',
+            stylePath: './src/assets/generated/image-classes.css',
+            includes: /\.(png|jpe?g)$/i,
+            excludes: /icons\//,
+            transform: ({ className, imageUrl, imageAbsPath, width, height }) => {
+              // 仅对 css.jpg 返回自定义样式；其他图片走默认回退逻辑
+              if (className !== 'ui-css' || !imageAbsPath.includes('css.jpg')) return
+              return {
+                backgroundImage: `url(${imageUrl})`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+                backgroundSize: 'contain',
+                width: width ? `${Math.round(width / 4)}rem` : undefined,
+                height: height ? `${Math.round(height / 4)}rem` : undefined
+              }
+            }
+          }
+        ]
       },
       publicConfig: {
         enable: true,

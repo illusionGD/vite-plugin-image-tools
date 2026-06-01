@@ -1,5 +1,23 @@
 # vite-plugin-image-tools
 
+## 4.1.1
+
+### Patch Changes
+
+- fix vite@8.x bug and fix css-gen sprites bug
+
+## 4.1.0
+
+### Minor Changes
+
+- add css-gen tranform function
+
+## 4.0.0
+
+### Major Changes
+
+- release-4.0.0
+
 ## 3.1.3
 
 ### Patch Changes

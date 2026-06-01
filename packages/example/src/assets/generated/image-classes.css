@@ -1,0 +1,95 @@
+.ui-1{
+	background-image: url(../icons/1.png);
+	width: 56px;
+	height: 68px;
+}
+
+.ui-2{
+	background-image: url(../icons/2.png);
+	width: 56px;
+	height: 68px;
+}
+
+.ui-3{
+	background-image: url(../icons/3.png);
+	width: 56px;
+	height: 68px;
+}
+
+.ui-4{
+	background-image: url(../icons/4.png);
+	width: 56px;
+	height: 68px;
+}
+
+.ui-5{
+	background-image: url(../icons/5.png);
+	width: 56px;
+	height: 68px;
+}
+
+.ui-icon{
+	background-image: url(../icons/icon.png);
+	width: 56px;
+	height: 68px;
+}
+
+.ui-icon{
+	background-image: url(../icons/icon_hover.png);
+	width: 56px;
+	height: 68px;
+}
+.ui-icon:hover{
+	background-image: url(../icons/icon_hover.png);
+}
+
+.ui-base64{
+	background-image: url(../base64.png);
+	width: 40px;
+	height: 40px;
+}
+
+.ui-css{
+	background-image: url(../css.jpg);
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: contain;
+	width: 203rem;
+	height: 299rem;
+}
+
+.ui-html{
+	background-image: url(../html.jpg);
+	width: 630px;
+	height: 1200px;
+}
+
+.ui-image{
+	background-image: url(../image.png);
+	width: 1920px;
+	height: 1128px;
+}
+
+.ui-import{
+	background-image: url(../import.jpg);
+	width: 2976px;
+	height: 4175px;
+}
+
+.ui-icons-sprites-test{
+	background-image: url(../sprites/icons-sprites-test.png);
+	width: 224px;
+	height: 136px;
+}
+
+.ui-icons-sprites{
+	background-image: url(../sprites/icons-sprites.png);
+	width: 224px;
+	height: 136px;
+}
+
+.ui-_2{
+	background-image: url(../图片_2.jpg);
+	width: 1920px;
+	height: 1080px;
+}

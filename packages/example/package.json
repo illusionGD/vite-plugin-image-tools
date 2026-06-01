@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:rolldown": "node ./node_modules/rolldown-vite/bin/vite.js dev",
     "build": "vite build",
+    "build:rolldown": "node ./node_modules/rolldown-vite/bin/vite.js build",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -15,6 +17,7 @@
     "@types/node": "^22.13.9",
     "@vitejs/plugin-vue": "^5.2.1",
     "postcss-scss": "^4.0.9",
+    "rolldown-vite": "^7.3.1",
     "sass": "^1.86.0",
     "spritesmith": "^3.5.1",
     "ts-node": "^10.9.2",
