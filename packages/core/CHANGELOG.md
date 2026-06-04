@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 4.1.2
+
+### Patch Changes
+
+- delete old code
+
 ## 4.1.1
 
 ### Patch Changes
