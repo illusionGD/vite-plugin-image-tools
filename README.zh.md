@@ -98,7 +98,7 @@ export default defineConfig({
             algorithm: 'binary-tree'
           }
         ],
-        rootValue: 16
+        // rootValue: 16
       },
 
       // 自动生成 CSS 类
@@ -147,6 +147,7 @@ export default defineConfig({
 | cacheDir            | string             | `node_modules/.cache/vite-plugin-image`                       | 开发环境缓存目录                                             |
 | spritesConfig       | object             | -                                                            | 精灵图配置                                                   |
 | cssGen              | object             | `{ rules: [], format: 'css' }`                               | CSS 类生成规则                                              |
+| deviceCss           | object             | `{ enable: false }`                                          | 多端 CSS 图片变体（仅构建期）                               |
 | sharpConfig         | object             | `{}`                                                         | Sharp 配置（jpeg、png、webp、avif 等）                       |
 | svgoConfig          | object             | preset-default + removerXMLNS、removeViewBox                 | SVGO 配置                                                    |
 | publicConfig        | object             | -                                                            | `public/` 目录图片配置                                       |
@@ -324,6 +325,61 @@ cssGen: {
 ### compatibility
 
 为 `true` 时，插入脚本检测 WebP 支持，仅对 CSS 背景图做转换。适用于需兼容不支持 WebP 的浏览器场景。
+
+> 与 `deviceCss` 互斥。两者同时开启时，`compatibility` 会被禁用。
+
+### deviceCss
+
+**仅构建期生效。** 为 CSS 背景图按端生成不同压缩档的变体，向 `<head>` 注入同步的 UA 检测脚本（给 `<html>` 加 `device-<name>` 类），并在 CSS 末尾追加覆盖规则，使各端加载各自的图片。
+
+```js
+deviceCss: {
+  enable: true,
+  classPrefix: 'device',   // → html.device-ios ...
+  devices: [
+    { name: 'ios',     match: /iphone|ipad|ipod/i, quality: 50, scale: 0.5 },
+    { name: 'android', match: /android/i,          quality: 55, scale: 0.5 },
+    { name: 'mb',      match: /mobile/i,            quality: 60, scale: 0.75 }
+  ],
+  includes: /\.(png|jpe?g)$/i,
+  excludes: /icons\//
+}
+```
+
+生成产物：
+
+```html
+<!-- 注入在 <head> 最前，CSS 生效前同步执行（无闪烁） -->
+<script>;(function(){var ua=navigator.userAgent;var name="";
+  if(/iphone|ipad|ipod/i.test(ua))name="ios";
+  else if(/android/i.test(ua))name="android";
+  else if(/mobile/i.test(ua))name="mb";
+  if(name)document.documentElement.classList.add("device-"+name)})()</script>
+```
+
+```css
+.banner{background-image:url(image.webp)}                          /* 基础图 —— 不变，无端匹配时使用 */
+html.device-ios .banner{background-image:url(image-ios.webp)}      /* 只替换 url() */
+html.device-android .banner{background-image:url(image-android.webp)}
+html.device-mb .banner{background-image:url(image-mb.webp)}
+```
+
+**`DeviceProfile`** 字段：
+
+- `name`：端标识，同时作为 class 后缀（`device-ios`）和文件名后缀（`image-ios.webp`）
+- `match`：注入脚本使用的 UA 正则（按数组顺序，先匹配先生效）
+- `quality`：该端压缩质量，覆盖全局 `quality`
+- `scale`：`0-1`，**仅缩小输出图的像素**（宽高等比缩放），不改变 CSS 盒子尺寸——浏览器把更小的图渲染到同样大小，移动端字节更省
+- `format`：输出格式，默认 `convert.format`（`convert` 关闭时为原格式）
+- `sharpConfig`：该端 sharp 细粒度配置，覆盖全局 `sharpConfig`
+
+注意：
+
+- 仅对 CSS `background`/`background-image` 引用的**位图**生成变体（跳过 `svg`/`gif`）；`<img>` 标签不受影响。
+- 变体若比原图还大则跳过，该端回退到基础图。
+- UA 未匹配任何端时不加 class，使用原始基础图。
+- 不能与 `compatibility` 同时使用（两者都会改写 CSS 背景图选择器）——同时开启时 `compatibility` 会被禁用，由 `deviceCss` 接管。
+- **dev 不生效**（变体是物理文件），dev 仍按单图服务。
 
 ### enableDev / enableDevConvert
 

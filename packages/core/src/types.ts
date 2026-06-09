@@ -75,6 +75,62 @@ export type PerImageResolver = (
   filePath: string
 ) => PerImageConfig | Promise<PerImageConfig>
 
+/**
+ * @en Single device/terminal profile for CSS image variants (build only).
+ * @zh 单个端档位配置，用于 CSS 图片的多端变体（仅构建期）。
+ */
+export type DeviceProfile = {
+  /**
+   * @en Device id, used as both class suffix (device-ios) and filename suffix (img.ios.webp).
+   * @zh 端标识，同时用作 class 后缀(device-ios)与文件名后缀(img.ios.webp)。
+   */
+  name: string
+  /**
+   * @en User-Agent regex used by the injected client script (first match wins).
+   * @zh 客户端注入脚本使用的 UA 匹配正则（数组顺序，先匹配先生效）。
+   */
+  match: RegExp
+  /**
+   * @en Compression quality for this device, overrides global quality.
+   * @zh 该端压缩质量，覆盖全局 quality。
+   */
+  quality?: number
+  /**
+   * @en Scale (0-1) applied to the OUTPUT bitmap pixels only; CSS size is untouched. Default 1.
+   * @zh 缩放比例(0-1)，仅缩小输出图像素，不改变 CSS 样式。默认 1。
+   */
+  scale?: number
+  /**
+   * @en Output format for this device, default: convert.format or original format.
+   * @zh 该端输出格式，默认沿用 convert.format 或原格式。
+   */
+  format?: SharpImgFormatType
+  /**
+   * @en Fine-grained sharp options for this device, overrides global sharpConfig.
+   * @zh 该端 sharp 细粒度配置，覆盖全局 sharpConfig。
+   */
+  sharpConfig?: SharpOptionsType
+}
+
+/**
+ * @en Per-device CSS image variant config (build only). Generates variants and
+ *     rewrites CSS to swap url by `html.<classPrefix>-<name>` selectors.
+ * @zh 多端 CSS 图片变体配置（仅构建期）。生成各端变体并以
+ *     `html.<classPrefix>-<name>` 选择器改写 CSS 的 url。
+ */
+export type DeviceCssConfig = {
+  /** @en Enable, default: false. @zh 是否启用，默认：false */
+  enable?: boolean
+  /** @en Class prefix, default: 'device' (→ device-ios). @zh class 前缀，默认 'device'。 */
+  classPrefix?: string
+  /** @en Device profiles; falls back to built-in set when omitted. @zh 端档位列表，不传用内置默认集。 */
+  devices?: DeviceProfile[]
+  /** @en Extra include filter on top of global filters. @zh 在全局过滤之上再叠加的包含规则。 */
+  includes?: PatternType
+  /** @en Extra exclude filter on top of global filters. @zh 在全局过滤之上再叠加的排除规则。 */
+  excludes?: PatternType
+}
+
 export type CssGenVariantRule = {
   /**
    * @en Regex for matching variant image filename.
@@ -377,6 +433,12 @@ export type PluginOptions = {
     /** @en Output format, default: 'css'. @zh 输出格式，默认：'css' */
     format?: 'css'
   }
+
+  /**
+   * @en Per-device CSS image variant config (build only), default: { enable: false }
+   * @zh 多端 CSS 图片变体配置（仅构建期），默认：{ enable: false }
+   */
+  deviceCss?: DeviceCssConfig
 }
 
 export type ImgFormatType = keyof typeof IMG_FORMATS_ENUM

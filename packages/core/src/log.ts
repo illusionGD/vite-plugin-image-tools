@@ -7,6 +7,8 @@ interface LogSizeType {
     logName?: string
     originSize: number
     compressSize: number
+    /** Device name when this entry is a per-device CSS variant */
+    device?: string
 }
 
 export const logSize: LogSizeType[] = []
@@ -63,6 +65,36 @@ export function printLog() {
             `compress images total size: ${pc.bold(formatFileSize(totalSize))} ---> ${pc.bold(formatFileSize(compressedSize))} | ${totalRate > 0 ? pc.green(totalRate + '%↓') : pc.red(Math.abs(totalRate) + '%↑')}`
         )
     )
+
+    // Per-device total size comparison (deviceCss variants)
+    const deviceTotals: { [name: string]: { origin: number; compress: number } } = {}
+    logSize.forEach(({ device, originSize, compressSize }) => {
+        if (!device) return
+        const total = (deviceTotals[device] ||= { origin: 0, compress: 0 })
+        total.origin += originSize
+        total.compress += compressSize
+    })
+    const deviceNames = Object.keys(deviceTotals)
+    if (deviceNames.length) {
+        const nameMax = deviceNames.reduce((p, n) => Math.max(p, n.length), 0)
+        console.log(
+            pc.greenBright(
+                '-------------- per-device total size --------------'
+            )
+        )
+        deviceNames.forEach((name) => {
+            const { origin, compress } = deviceTotals[name]
+            const rate = roundTo(((origin - compress) / origin) * 100, 2)
+            let label = name + ':'
+            for (let i = label.length; i < nameMax + 1; i++) {
+                label += ' '
+            }
+            console.log(
+                `${pc.cyan(label)} ${pc.bold(formatFileSize(origin))} ---> ${pc.bold(formatFileSize(compress))} | ${pc.yellow('rate:')} ${rate > 0 ? pc.green(rate + '%↓') : pc.red(Math.abs(rate) + '%↑')}`
+            )
+        })
+    }
+
     console.log(
         pc.greenBright(
             '-------------- vite-plugin-images-tool log end --------------'

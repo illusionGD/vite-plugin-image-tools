@@ -47,8 +47,18 @@ export const DEFAULT_CONFIG: PluginOptions = {
     spritesConfig: {
         rules: [],
         algorithm: 'binary-tree'
+    },
+    deviceCss: {
+        enable: false
     }
 }
+
+/** Built-in device profiles used when deviceCss.devices is omitted */
+export const DEFAULT_DEVICE_PROFILES = [
+    { name: 'android', match: /android/i, quality: 65, scale: 1 },
+    { name: 'ios', match: /iphone|ipad|ipod/i, quality: 60, scale: 1 },
+    { name: 'mb', match: /mobile/i, quality: 70, scale: 1 }
+] as const
 
 export const isWindows =
     typeof process !== 'undefined' && process.platform === 'win32'

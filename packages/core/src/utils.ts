@@ -15,6 +15,27 @@ const globalConfig: InternalConfig = resolveInternalConfig(DEFAULT_CONFIG)
 /** Compressed image cache */
 export const compressCache: { [key: string]: Buffer } = {}
 
+/** @en WebP cannot exceed this in either dimension. @zh WebP 任一边的最大尺寸。 */
+export const WEBP_MAX_DIMENSION = 16383
+
+/**
+ * @en Whether the given size exceeds the target format's hard limit (WebP 16383²).
+ * @zh 给定尺寸是否超过目标格式的硬上限（WebP 16383²）。
+ */
+export function exceedsFormatSizeLimit(
+  format: string,
+  width?: number,
+  height?: number
+): boolean {
+  if (format !== IMG_FORMATS_ENUM.webp) {
+    return false
+  }
+  return Boolean(
+    (width && width > WEBP_MAX_DIMENSION) ||
+      (height && height > WEBP_MAX_DIMENSION)
+  )
+}
+
 /** Get global configuration */
 export function getGlobalConfig() {
   return globalConfig
@@ -111,15 +132,9 @@ export async function handleConvertImgMap(bundle: any) {
     }
 
     if (source) {
-      const metadata = await sharp(source).metadata()
-      const { width, height } = metadata
+      const { width, height } = await sharp(source).metadata()
       // WebP maximum resolution cannot exceed 16383 * 16383.
-      if (
-        targetFormat === IMG_FORMATS_ENUM.webp &&
-        width &&
-        height &&
-        (width > 16383 || height > 16383)
-      ) {
+      if (exceedsFormatSizeLimit(targetFormat, width, height)) {
         continue
       }
     }

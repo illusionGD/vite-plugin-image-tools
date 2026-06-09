@@ -147,6 +147,7 @@ export default defineConfig({
 | cacheDir          | string            | `node_modules/.cache/vite-plugin-image`                        | Dev cache directory                                           |
 | spritesConfig     | object            | -                                                             | Sprite sheet configuration                                    |
 | cssGen            | object            | `{ rules: [], format: 'css' }`                                | CSS class generation rules                                    |
+| deviceCss         | object            | `{ enable: false }`                                           | Per-device CSS image variants (build only)                    |
 | sharpConfig       | object            | `{}`                                                          | Sharp options (jpeg, png, webp, avif, etc.)                   |
 | svgoConfig        | object            | preset-default + removerXMLNS, removeViewBox                   | SVGO configuration                                            |
 | publicConfig      | object            | -                                                             | Config for `public/` images                                   |
@@ -324,6 +325,61 @@ cssGen: {
 ### compatibility
 
 When `true`, inserts a script to detect WebP support and only converts CSS background images. Use when targeting browsers that may not support WebP.
+
+> Mutually exclusive with `deviceCss`. If both are enabled, `compatibility` is disabled.
+
+### deviceCss
+
+**Build only.** Generates per-device compressed variants for CSS background images, injects a synchronous UA-detection script into `<head>` that adds a `device-<name>` class to the `<html>` element, and appends CSS override rules so each device loads its own image.
+
+```js
+deviceCss: {
+  enable: true,
+  classPrefix: 'device',   // → html.device-ios ...
+  devices: [
+    { name: 'ios',     match: /iphone|ipad|ipod/i, quality: 50, scale: 0.5 },
+    { name: 'android', match: /android/i,          quality: 55, scale: 0.5 },
+    { name: 'mb',      match: /mobile/i,            quality: 60, scale: 0.75 }
+  ],
+  includes: /\.(png|jpe?g)$/i,
+  excludes: /icons\//
+}
+```
+
+Generated output:
+
+```html
+<!-- injected at the very top of <head>, runs before CSS applies (no FOUC) -->
+<script>;(function(){var ua=navigator.userAgent;var name="";
+  if(/iphone|ipad|ipod/i.test(ua))name="ios";
+  else if(/android/i.test(ua))name="android";
+  else if(/mobile/i.test(ua))name="mb";
+  if(name)document.documentElement.classList.add("device-"+name)})()</script>
+```
+
+```css
+.banner{background-image:url(image.webp)}                          /* base — unchanged, shown when no device matches */
+html.device-ios .banner{background-image:url(image-ios.webp)}      /* only the url() is swapped */
+html.device-android .banner{background-image:url(image-android.webp)}
+html.device-mb .banner{background-image:url(image-mb.webp)}
+```
+
+**`DeviceProfile`** fields:
+
+- `name`: device id, used as both the class suffix (`device-ios`) and the filename suffix (`image-ios.webp`)
+- `match`: UA regex used by the injected script (array order, first match wins)
+- `quality`: compression quality for this device, overrides global `quality`
+- `scale`: `0-1`, scales the **output bitmap pixels only** (`width`/`height` resized proportionally); the CSS box size is untouched, so the browser renders the smaller image at the same size — fewer bytes on mobile
+- `format`: output format, default `convert.format` (or the original format when `convert` is off)
+- `sharpConfig`: per-device sharp options, overrides global `sharpConfig`
+
+Notes:
+
+- Only **raster** images referenced by CSS `background`/`background-image` get variants (`svg`/`gif` are skipped). `<img>` tags are not affected.
+- A variant is skipped when it ends up larger than the source — that device falls back to the base image.
+- When no device matches the UA, no class is added and the original (base) image is used.
+- Cannot be combined with `compatibility` (both rewrite CSS background-image selectors) — when both are enabled, `compatibility` is disabled and `deviceCss` takes over.
+- Does **not** run in dev (variants are physical files); dev serves the single image as usual.
 
 ### enableDev / enableDevConvert
 

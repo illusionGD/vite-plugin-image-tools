@@ -48,6 +48,14 @@ export default defineConfig({
           quality: 60
         }
       },
+      deviceCss: {
+        enable: true,
+        devices: [
+          { name: 'ios', match: /iphone|ipad|ipod/i, quality: 50, scale: 0.5 },
+          { name: 'android', match: /android/i, quality: 55, scale: 0.5 },
+          { name: 'mb', match: /mobile/i, quality: 60, scale: 0.75 }
+        ],
+      },
       spritesConfig: {
         rules: [
           {
@@ -97,7 +105,11 @@ export default defineConfig({
         quality: 80,
       }
     })
-  ]
+  ],
+  server: {
+    host: true,
+    port: 3000
+  }
   //   experimental: {
   //     renderBuiltUrl(filename, opt) {
   //       console.log('🚀 ~ opt:', opt)

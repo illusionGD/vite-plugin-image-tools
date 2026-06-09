@@ -26,6 +26,7 @@ import {
 } from './sprites'
 import { printLog } from './log'
 import { generateCssArtifacts, generateCssArtifactsForDev } from './css-gen'
+import { buildDeviceScript, handleDeviceCssBundle } from './device-css'
 import {
     clearPendingDeleteBundleFiles,
     getPendingDeleteBundleFiles
@@ -225,26 +226,31 @@ export default function ImageTools(
         },
         async transformIndexHtml(html) {
             const globalConfig = getGlobalConfig()
+            const { bodyWebpClassName } = globalConfig
             const enableMainWebp =
                 globalConfig.convert.enable &&
                 globalConfig.convert.format === 'webp'
-            if (
+            const tags: any[] = []
+
+            // Device class detection script (build only), injected synchronously
+            // into <head> so the class is set on <html> before CSS applies.
+            if (isBuild && globalConfig.deviceCss.enable) {
+                tags.push({
+                    tag: 'script',
+                    injectTo: 'head-prepend',
+                    children: buildDeviceScript()
+                })
+            }
+
+            // WebP compatibility detection script.
+            const skipWebpScript =
                 !compatibility ||
                 (isBuild && !enableMainWebp) ||
                 (!isBuild && enableDevConvert)
-            ) {
-                return {
-                    html,
-                    tags: []
-                }
-            }
-            const { bodyWebpClassName } = getGlobalConfig()
-            return {
-                html,
-                tags: [
-                    {
-                        tag: 'script',
-                        children: `
+            if (!skipWebpScript) {
+                tags.push({
+                    tag: 'script',
+                    children: `
             ;(function () {
               var img = document.createElement('img')
               img.src =
@@ -259,8 +265,12 @@ export default function ImageTools(
               }
             })()
             `
-                    }
-                ]
+                })
+            }
+
+            return {
+                html,
+                tags
             }
         },
         async generateBundle(options, bundle) {
@@ -272,6 +282,10 @@ export default function ImageTools(
             await handleSpritesCssBundle(this, bundle)
             if (globalConfig.convert.enable) {
                 await handleConvertImgMap(bundle)
+            }
+
+            if (globalConfig.deviceCss.enable) {
+                await handleDeviceCssBundle(bundle, this)
             }
 
             await handleImgBundle(bundle, this)

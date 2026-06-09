@@ -1,6 +1,8 @@
-import { DEFAULT_CONFIG, IMG_FORMATS_ENUM } from '../constants'
+import { DEFAULT_CONFIG, DEFAULT_DEVICE_PROFILES, IMG_FORMATS_ENUM } from '../constants'
 import type {
   ConvertConfig,
+  DeviceCssConfig,
+  DeviceProfile,
   PerImageResolver,
   PluginOptions,
   SharpImgFormatType
@@ -13,9 +15,18 @@ export type InternalConvertConfig = Required<
   filter?: (path: string) => boolean | Promise<boolean>
 }
 
+export type InternalDeviceCssConfig = {
+  enable: boolean
+  classPrefix: string
+  devices: DeviceProfile[]
+  includes?: DeviceCssConfig['includes']
+  excludes?: DeviceCssConfig['excludes']
+}
+
 export type InternalConfig = PluginOptions & {
   convert: InternalConvertConfig
   perImage: PerImageResolver
+  deviceCss: InternalDeviceCssConfig
 }
 
 const SHARP_FORMATS = new Set<SharpImgFormatType>([
@@ -40,6 +51,30 @@ function normalizeFormat(format?: string): SharpImgFormatType {
 }
 
 /**
+ * @en Resolve device CSS config: fill defaults, normalize device formats.
+ * @zh 解析多端 CSS 配置：填默认值、归一化各端格式。
+ */
+function resolveDeviceCss(
+  options: DeviceCssConfig | undefined
+): InternalDeviceCssConfig {
+  const cfg = options || {}
+  const devices = (cfg.devices && cfg.devices.length
+    ? cfg.devices
+    : (DEFAULT_DEVICE_PROFILES as unknown as DeviceProfile[])
+  ).map((d) => ({
+    ...d,
+    format: d.format ? normalizeFormat(d.format) : undefined
+  }))
+  return {
+    enable: cfg.enable ?? false,
+    classPrefix: cfg.classPrefix || 'device',
+    devices,
+    includes: cfg.includes,
+    excludes: cfg.excludes
+  }
+}
+
+/**
  * @en Resolve user input to stable internal config. Keep backward compatibility.
  * @zh 将用户输入解析为稳定的内部配置，并保持旧配置兼容。
  */
@@ -60,11 +95,25 @@ export function resolveInternalConfig(
 
   const perImage = options.perImage || (async () => ({}))
 
-  return {
+  const deviceCss = resolveDeviceCss(options.deviceCss)
+
+  const resolved: InternalConfig = {
     ...(DEFAULT_CONFIG as PluginOptions),
     ...(options as PluginOptions),
     convert: resolvedConvert,
-    perImage
+    perImage,
+    deviceCss
   }
+
+  // `compatibility` and `deviceCss` cannot run together (they both rewrite CSS
+  // background-image selectors). When both are on, deviceCss wins.
+  if (deviceCss.enable && resolved.compatibility) {
+    console.warn(
+      '[vite-plugin-image-tools] `compatibility` and `deviceCss` cannot be enabled together; disabling `compatibility` because `deviceCss` is on.'
+    )
+    resolved.compatibility = false
+  }
+
+  return resolved
 }
 

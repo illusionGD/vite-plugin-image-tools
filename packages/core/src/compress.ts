@@ -21,6 +21,7 @@ import type {
   SharpOptionsType
 } from './types'
 import { transformExtInCss } from './transform'
+import { appendDeviceCss } from './device-css'
 import { logSize } from './log'
 import { UserConfig } from 'vite'
 import { cwd } from 'process'
@@ -192,6 +193,10 @@ export async function handleImgBundle(bundle: any, pluginContext: PluginContext)
           chunk.source = handleReplaceConverted(chunk.source)
         }
       }
+    }
+    // Append per-device override rules for CSS background images (build only).
+    if (/(css)$/.test(key)) {
+      chunk.source = await appendDeviceCss(chunk.source)
     }
     const isTrue = await filterChunkImage(chunk)
     if (!isTrue) {
