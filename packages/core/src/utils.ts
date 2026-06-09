@@ -10,7 +10,6 @@ import { logSize } from './log'
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
 import { resolveInternalConfig, type InternalConfig } from './config/resolve'
 
-const imgWebpMap: { [key: string]: string } = {}
 const imgConvertMap: { [key: string]: string } = {}
 const globalConfig: InternalConfig = resolveInternalConfig(DEFAULT_CONFIG)
 /** Compressed image cache */
@@ -30,16 +29,6 @@ export function setGlobalConfig(config: Partial<PluginOptions>) {
     DEFAULT_CONFIG.spritesConfig,
     config.spritesConfig
   )
-}
-
-/** Add WebpMap item */
-export function addImgWebpMap(name: string) {
-  imgWebpMap[name] = replaceWebpExt(name)
-}
-
-/** Get webpMap object */
-export function getImgWebpMap() {
-  return imgWebpMap
 }
 
 const escapeRegExp = (s: string) =>
@@ -159,9 +148,6 @@ export async function handleConvertImgMap(bundle: any) {
 
     // Collect images to be converted to target format
     addImgConvertMap(base, convertedBase)
-    if (targetFormat === IMG_FORMATS_ENUM.webp) {
-      addImgWebpMap(base)
-    }
   }
 }
 
@@ -287,11 +273,6 @@ export function replaceExt(url: string, targetFormat: string) {
 
   const newPath = pathname.replace(ext, `.${targetFormat}`)
   return query ? `${newPath}?${query}` : newPath
-}
-
-/** Backward compatibility helper for webp replacement */
-export function replaceWebpExt(url: string) {
-  return replaceExt(url, IMG_FORMATS_ENUM.webp)
 }
 
 /** Handle user's filter function to filter image paths */

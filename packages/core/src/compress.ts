@@ -87,7 +87,7 @@ export async function processImage(filePath: string) {
     return { buffer: file, type: ext.replace('.', '') }
   }
 
-  const enableMainWebp = convert.enable && targetFormat === IMG_FORMATS_ENUM.webp
+  const enableConvert = convert.enable
   let shouldConvertToMainFormat = false
   if (enableDevConvert && !ext.includes(`.${targetFormat}`) && !ext.includes(IMG_FORMATS_ENUM.gif)) {
     if (convert.filter) {
@@ -124,7 +124,7 @@ export async function processImage(filePath: string) {
     },
     {
       quality: singleQuality,
-      enableConvert: enableMainWebp,
+      enableConvert: enableConvert,
       sharpConfig,
       enableDevConvert,
       type,
@@ -178,10 +178,9 @@ export async function handleImgBundle(bundle: any, pluginContext: PluginContext)
     const single = await perImage(join(cwd(), sourcePath))
     const singleQuality = single?.quality || quality
     const targetFormat = single?.format || convert.format || IMG_FORMATS_ENUM.webp
-    const enableMainWebp =
-      convert.enable && targetFormat === IMG_FORMATS_ENUM.webp
-
-    if (/(js|css)$/.test(key) && enableMainWebp) {
+    const enableConvert = convert.enable
+      
+    if (/(js|css)$/.test(key) && enableConvert) {
       if (compatibility) {
         if (/(css)$/.test(key)) {
           chunk.source = await transformExtInCss(chunk.source, targetFormat)

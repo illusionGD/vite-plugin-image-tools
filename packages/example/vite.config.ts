@@ -32,9 +32,9 @@ export default defineConfig({
         limitSize: 2 * 1024
       },
       perImage: async (filePath: string) => {
-        if (filePath.includes('import.jpg')) {
-          return { format: 'avif', quality: 60 }
-        }
+        // if (filePath.includes('import.jpg')) {
+        //   return { format: 'avif', quality: 60 }
+        // }
         if (filePath.includes('css.jpg')) {
           return { quality: 50 }
         }
@@ -50,11 +50,11 @@ export default defineConfig({
       },
       spritesConfig: {
         rules: [
-        //   {
-        //     dir: './src/assets/icons',
-        //     outputDir: './src/assets/sprites',
-        //     name: 'icons-sprites-test',
-        //   }
+          {
+            dir: './src/assets/icons',
+            outputDir: './src/assets/sprites',
+            name: 'icons-sprites-test',
+          }
         ],
         rootValue: 100,
         algorithm: 'binary-tree'

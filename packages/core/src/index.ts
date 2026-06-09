@@ -275,24 +275,19 @@ export default function ImageTools(
             }
 
             await handleImgBundle(bundle, this)
-            const outDir = path.resolve(
-                process.cwd(),
-                options.dir || viteConfig.build?.outDir || 'dist'
-            )
-            
         },
         async writeBundle(opt, bundle) {
             const { compatibility, log, publicConfig, convert } =
                 getGlobalConfig()
-            const enableMainWebp =
-                convert.enable && convert.format === 'webp'
+            const enableConvert =
+                convert.enable
             if (publicConfig && publicConfig.enable) {
                 await handlePublicImg(viteConfig)
             }
             if (log) {
                 printLog()
             }
-            if (!enableMainWebp) {
+            if (!enableConvert) {
                 return
             }
             for (const key in bundle) {
