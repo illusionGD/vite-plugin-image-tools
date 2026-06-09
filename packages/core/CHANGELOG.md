@@ -1,5 +1,11 @@
 # vite-plugin-image-tools
 
+## 4.1.3
+
+### Patch Changes
+
+- fix convert format bug
+
 ## 4.1.2
 
 ### Patch Changes
