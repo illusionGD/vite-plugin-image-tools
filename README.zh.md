@@ -200,9 +200,29 @@ spritesConfig: {
   includes: /\.(png|jpg)$/,
   excludes: /\.(svg)$/,
   rootValue: 16,
+  transformUnit: (unit, filePath) => `${unit / 16}rem`,
   deleteOriginImg: false
 }
 ```
+
+**`transformUnit`**：`(unit: number, filePath: string) => string`
+
+自定义写入生成的精灵图 CSS 中每个数值（`width` / `height` / `background-position`）的单位。
+
+- `unit`：精灵图计算出的原始像素值
+- `filePath`：源图绝对路径，可据此对不同图片做差异化转换
+- 返回值：**带单位**的最终值（如 `'0.32rem'`、`'10px'`）
+
+不传时默认为 `` `${unit}px` ``。可用于输出 `rem` / `vw` 或其它自定义单位：
+
+```js
+// px → rem（设计稿基准 16px）
+transformUnit: (unit) => `${unit / 16}rem`
+```
+
+**`rootValue`**：`number`，默认 `1`
+
+当源 CSS 中图标的 `width` / `height` 使用 `rem` 单位时，插件需要先把它换算成 px，才能计算精灵图相对原图的缩放比例。`rootValue` 即每 `1rem` 对应的 px 数（`px = rem 值 × rootValue`）。源 CSS 使用 px 时该配置不生效。
 
 **开发监听**：`enableDev` 为 true 时，插件会监听精灵图源目录。当图片增删改时，会重建精灵图、失效模块缓存并触发整页刷新。
 

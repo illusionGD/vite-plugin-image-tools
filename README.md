@@ -98,7 +98,7 @@ export default defineConfig({
             algorithm: 'binary-tree'
           }
         ],
-        rootValue: 16
+        // rootValue: 16
       },
 
       // Auto-generate CSS classes
@@ -200,9 +200,29 @@ spritesConfig: {
   includes: /\.(png|jpg)$/,
   excludes: /\.(svg)$/,
   rootValue: 16,
+  transformUnit: (unit, filePath) => `${unit / 16}rem`,
   deleteOriginImg: false
 }
 ```
+
+**`transformUnit`**: `(unit: number, filePath: string) => string`
+
+Customizes the unit of every numeric value (`width` / `height` / `background-position`) written into the generated sprite CSS.
+
+- `unit`: the raw pixel value computed for the sprite
+- `filePath`: absolute path of the source image, so you can apply per-image conversion
+- return: the final value **including its unit** (e.g. `'0.32rem'`, `'10px'`)
+
+When omitted, the default is `` `${unit}px` ``. Use it to output `rem` / `vw` or any custom unit:
+
+```js
+// px → rem (design draft base 16px)
+transformUnit: (unit) => `${unit / 16}rem`
+```
+
+**`rootValue`**: `number`, default `1`
+
+When the source CSS declares an icon's `width` / `height` in `rem`, the plugin converts it to px to compute the sprite's scale ratio relative to the original image. `rootValue` is the number of px per `1rem` (`px = remValue * rootValue`). It has no effect when the source CSS uses px.
 
 **Dev watcher**: When `enableDev` is true, the plugin watches sprite source directories. On add/change/unlink of images, it rebuilds the sprite, invalidates the module graph, and triggers a full reload.
 
